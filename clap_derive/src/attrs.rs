@@ -396,15 +396,15 @@ impl Attrs {
             let attr = attr.clone();
             match attr {
                 Short(ident) => {
-                    self.push_method(ident, self.name.clone().translate_char(*self.casing));
+                    self.push_method(ident, self.name.clone().translate_char((*self.casing).clone()));
                 }
 
                 Long(ident) => {
-                    self.push_method(ident, self.name.clone().translate(*self.casing));
+                    self.push_method(ident, self.name.clone().translate((*self.casing).clone()));
                 }
 
                 Env(ident) => {
-                    self.push_method(ident, self.name.clone().translate(*self.env_casing));
+                    self.push_method(ident, self.name.clone().translate((*self.env_casing).clone()));
                 }
 
                 ArgEnum(_) => self.is_enum = true,
@@ -672,7 +672,7 @@ impl Attrs {
     }
 
     pub fn cased_name(&self) -> TokenStream {
-        self.name.clone().translate(*self.casing)
+        self.name.clone().translate((*self.casing).clone())
     }
 
     pub fn value_name(&self) -> TokenStream {
@@ -868,7 +868,7 @@ pub enum ParserKind {
 }
 
 /// Defines the casing for the attributes long representation.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum CasingStyle {
     /// Indicate word boundaries with uppercase letter, excluding the first word.
     Camel,
@@ -886,25 +886,37 @@ pub enum CasingStyle {
     Upper,
     /// Use the original attribute name defined in the code.
     Verbatim,
+    /// Add a literal prefix and a dot, and continue with the given style.
+    Prefix(String, Box<CasingStyle>),
 }
 
 impl CasingStyle {
     fn from_lit(name: LitStr) -> Sp<Self> {
+        Sp::new(Self::parse(&name.value(), &name), name.span())
+    }
+
+    fn parse(value: &str, source: &LitStr) -> CasingStyle {
         use self::CasingStyle::*;
-
-        let normalized = name.value().to_upper_camel_case().to_lowercase();
-        let cs = |kind| Sp::new(kind, name.span());
-
-        match normalized.as_ref() {
-            "camel" | "camelcase" => cs(Camel),
-            "kebab" | "kebabcase" => cs(Kebab),
-            "pascal" | "pascalcase" => cs(Pascal),
-            "screamingsnake" | "screamingsnakecase" => cs(ScreamingSnake),
-            "snake" | "snakecase" => cs(Snake),
-            "lower" | "lowercase" => cs(Lower),
-            "upper" | "uppercase" => cs(Upper),
-            "verbatim" | "verbatimcase" => cs(Verbatim),
-            s => abort!(name, "unsupported casing: `{}`", s),
+        match value.to_upper_camel_case().to_lowercase().as_str() {
+            "camel" | "camelcase" => Camel,
+            "kebab" | "kebabcase" => Kebab,
+            "pascal" | "pascalcase" => Pascal,
+            "screamingsnake" | "screamingsnakecase" => ScreamingSnake,
+            "snake" | "snakecase" => Snake,
+            "lower" | "lowercase" => Lower,
+            "upper" | "uppercase" => Upper,
+            "verbatim" | "verbatimcase" => Verbatim,
+            s => {
+                if let Some(prefix) = value.strip_prefix("prefix:") {
+                    if let Some((prefix, style)) = prefix.split_once(',') {
+                        Prefix(prefix.to_string(), Box::new(Self::parse(style, source)))
+                    } else {
+                        Prefix(prefix.to_string(), Box::new(Kebab))
+                    }
+                } else {
+                    abort!(source, "unsupported casing: `{}`", s);
+                }
+            }
         }
     }
 }
@@ -917,22 +929,11 @@ pub enum Name {
 
 impl Name {
     pub fn translate(self, style: CasingStyle) -> TokenStream {
-        use CasingStyle::*;
-
         match self {
             Name::Assigned(tokens) => tokens,
             Name::Derived(ident) => {
                 let s = ident.unraw().to_string();
-                let s = match style {
-                    Pascal => s.to_upper_camel_case(),
-                    Kebab => s.to_kebab_case(),
-                    Camel => s.to_lower_camel_case(),
-                    ScreamingSnake => s.to_shouty_snake_case(),
-                    Snake => s.to_snake_case(),
-                    Lower => s.to_snake_case().replace('_', ""),
-                    Upper => s.to_shouty_snake_case().replace('_', ""),
-                    Verbatim => s,
-                };
+                let s = Self::translate_raw(&style, s);
                 quote_spanned!(ident.span()=> #s)
             }
         }
@@ -940,7 +941,6 @@ impl Name {
 
     pub fn translate_char(self, style: CasingStyle) -> TokenStream {
         use CasingStyle::*;
-
         match self {
             Name::Assigned(tokens) => quote!( (#tokens).chars().next().unwrap() ),
             Name::Derived(ident) => {
@@ -954,11 +954,27 @@ impl Name {
                     Lower => s.to_snake_case(),
                     Upper => s.to_shouty_snake_case(),
                     Verbatim => s,
+                    Prefix(..) => abort!(ident.span(), "can't use prefix:... with short args"),
                 };
 
                 let s = s.chars().next().unwrap();
                 quote_spanned!(ident.span()=> #s)
             }
+        }
+    }
+
+    fn translate_raw(style: &CasingStyle, s: String) -> String {
+        use CasingStyle::*;
+        match style {
+            Pascal => s.to_upper_camel_case(),
+            Kebab => s.to_kebab_case(),
+            Camel => s.to_lower_camel_case(),
+            ScreamingSnake => s.to_shouty_snake_case(),
+            Snake => s.to_snake_case(),
+            Lower => s.to_snake_case().replace('_', ""),
+            Upper => s.to_shouty_snake_case().replace('_', ""),
+            Verbatim => s,
+            Prefix(pre, style) => pre.to_string() + "." + &Self::translate_raw(style, s),
         }
     }
 }

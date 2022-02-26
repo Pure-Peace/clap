@@ -137,10 +137,10 @@ In addition to the raw attributes, the following magic attributes are supported:
   - When `flatten`ing `Args`, this is scoped to just the args in this struct and any struct `flatten`ed into it
 - `rename_all = <expr>`: Override default field / variant name case conversion for `Command::name` / `Arg::name`
   - When not present: `kebab-case`
-  - Available values: `camelCase`, `kebab-case`, `PascalCase`, `SCREAMING_SNAKE_CASE`, `snake_case`, `lower`, `UPPER`, `verbatim`
+  - Available values: `camelCase`, `kebab-case`, `PascalCase`, `prefix:<prefix>[,style]`, `SCREAMING_SNAKE_CASE`, `snake_case`, `lower`, `UPPER`, `verbatim`
 - `rename_all_env = <expr>`: Override default field name case conversion for env variables for  `clap::Arg::env`
   - When not present: `SCREAMING_SNAKE_CASE`
-  - Available values: `camelCase`, `kebab-case`, `PascalCase`, `SCREAMING_SNAKE_CASE`, `snake_case`, `lower`, `UPPER`, `verbatim`
+  - Available values: `camelCase`, `kebab-case`, `PascalCase`, `prefix:<prefix>[,style]`, `SCREAMING_SNAKE_CASE`, `snake_case`, `lower`, `UPPER`, `verbatim`
 
 And for `Subcommand` variants:
 - `skip`: Ignore this variant
