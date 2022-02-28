@@ -51,6 +51,7 @@ pub fn gen_for_enum(
         Name::Derived(enum_name.clone()),
         Sp::call_site(DEFAULT_CASING),
         Sp::call_site(DEFAULT_ENV_CASING),
+        None,
     );
     let augmentation = gen_augment(&e.variants, &attrs, false);
     let augmentation_update = gen_augment(&e.variants, &attrs, true);
@@ -100,6 +101,7 @@ fn gen_from_arg_matches_for_enum(
         Name::Derived(name.clone()),
         Sp::call_site(DEFAULT_CASING),
         Sp::call_site(DEFAULT_ENV_CASING),
+        None,
     );
 
     let from_arg_matches = gen_from_arg_matches(name, &e.variants, &attrs);
@@ -152,6 +154,7 @@ fn gen_augment(
                 variant,
                 parent_attribute.casing(),
                 parent_attribute.env_casing(),
+                parent_attribute.prefix(),
             );
             let kind = attrs.kind();
 
@@ -346,6 +349,7 @@ fn gen_has_subcommand(
                 variant,
                 parent_attribute.casing(),
                 parent_attribute.env_casing(),
+                parent_attribute.prefix(),
             );
 
             if let Kind::ExternalSubcommand = &*attrs.kind() {
@@ -416,6 +420,7 @@ fn gen_from_arg_matches(
                 variant,
                 parent_attribute.casing(),
                 parent_attribute.env_casing(),
+                parent_attribute.prefix(),
             );
 
             if let Kind::ExternalSubcommand = &*attrs.kind() {
@@ -573,6 +578,7 @@ fn gen_update_from_arg_matches(
                 variant,
                 parent_attribute.casing(),
                 parent_attribute.env_casing(),
+                parent_attribute.prefix(),
             );
 
             match &*attrs.kind() {
@@ -599,6 +605,7 @@ fn gen_update_from_arg_matches(
                             field,
                             parent_attribute.casing(),
                             parent_attribute.env_casing(),
+                            parent_attribute.prefix(),
                         );
                         let field_name = field.ident.as_ref().unwrap();
                         (

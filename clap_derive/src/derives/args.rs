@@ -63,6 +63,7 @@ pub fn gen_for_struct(
         Name::Derived(struct_name.clone()),
         Sp::call_site(DEFAULT_CASING),
         Sp::call_site(DEFAULT_ENV_CASING),
+        None,
     );
     let app_var = Ident::new("__clap_app", Span::call_site());
     let augmentation = gen_augment(fields, &app_var, &attrs, false);
@@ -109,6 +110,7 @@ pub fn gen_from_arg_matches_for_struct(
         Name::Derived(struct_name.clone()),
         Sp::call_site(DEFAULT_CASING),
         Sp::call_site(DEFAULT_ENV_CASING),
+        None,
     );
 
     let constructor = gen_constructor(fields, &attrs);
@@ -168,6 +170,7 @@ pub fn gen_augment(
             field,
             parent_attribute.casing(),
             parent_attribute.env_casing(),
+            parent_attribute.prefix(),
         );
         let kind = attrs.kind();
         if let Kind::Subcommand(ty) = &*kind {
@@ -215,6 +218,7 @@ pub fn gen_augment(
             field,
             parent_attribute.casing(),
             parent_attribute.env_casing(),
+            parent_attribute.prefix(),
         );
         let kind = attrs.kind();
         match &*kind {
@@ -484,6 +488,7 @@ pub fn gen_constructor(fields: &Punctuated<Field, Comma>, parent_attribute: &Att
             field,
             parent_attribute.casing(),
             parent_attribute.env_casing(),
+            parent_attribute.prefix(),
         );
         let field_name = field.ident.as_ref().unwrap();
         let kind = attrs.kind();
@@ -551,6 +556,7 @@ pub fn gen_updater(
             field,
             parent_attribute.casing(),
             parent_attribute.env_casing(),
+            parent_attribute.prefix(),
         );
         let field_name = field.ident.as_ref().unwrap();
         let kind = attrs.kind();

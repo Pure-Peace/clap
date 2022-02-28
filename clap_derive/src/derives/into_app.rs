@@ -36,6 +36,7 @@ pub fn gen_for_struct(
         Name::Assigned(quote!(#app_name)),
         Sp::call_site(DEFAULT_CASING),
         Sp::call_site(DEFAULT_ENV_CASING),
+        None,
     );
     let name = attrs.cased_name();
     let app_var = Ident::new("__clap_app", Span::call_site());
@@ -82,6 +83,7 @@ pub fn gen_for_enum(enum_name: &Ident, generics: &Generics, attrs: &[Attribute])
         Name::Assigned(quote!(#app_name)),
         Sp::call_site(DEFAULT_CASING),
         Sp::call_site(DEFAULT_ENV_CASING),
+        None,
     );
     let name = attrs.cased_name();
     let app_var = Ident::new("__clap_app", Span::call_site());
