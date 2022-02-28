@@ -41,6 +41,7 @@ pub enum ClapAttr {
     RenameAllEnv(Ident, LitStr),
     RenameAll(Ident, LitStr),
     NameLitStr(Ident, LitStr),
+    Prefix(Ident, LitStr),
 
     // parse(parser_kind [= parser_func])
     Parse(Ident, ParserSpec),
@@ -77,6 +78,7 @@ impl Parse for ClapAttr {
                 match &*name_str {
                     "rename_all" => Ok(RenameAll(name, lit)),
                     "rename_all_env" => Ok(RenameAllEnv(name, lit)),
+                    "prefix" => Ok(Prefix(name, lit)),
 
                     "skip" => {
                         let expr = ExprLit {
