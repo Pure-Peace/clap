@@ -39,6 +39,7 @@ pub struct Attrs {
     name: Name,
     casing: Sp<CasingStyle>,
     env_casing: Sp<CasingStyle>,
+    prefix: Option<LitStr>,
     ty: Option<Type>,
     doc_comment: Vec<Method>,
     methods: Vec<Method>,
@@ -61,8 +62,9 @@ impl Attrs {
         name: Name,
         argument_casing: Sp<CasingStyle>,
         env_casing: Sp<CasingStyle>,
+        prefix: Option<LitStr>,
     ) -> Self {
-        let mut res = Self::new(span, name, None, argument_casing, env_casing);
+        let mut res = Self::new(span, name, None, argument_casing, env_casing, prefix);
         res.push_attrs(attrs);
         res.push_doc_comment(attrs, "about");
 
@@ -98,6 +100,7 @@ impl Attrs {
         variant: &Variant,
         struct_casing: Sp<CasingStyle>,
         env_casing: Sp<CasingStyle>,
+        prefix: Option<LitStr>,
     ) -> Self {
         let name = variant.ident.clone();
         let mut res = Self::new(
@@ -106,6 +109,7 @@ impl Attrs {
             None,
             struct_casing,
             env_casing,
+            prefix,
         );
         res.push_attrs(&variant.attrs);
         res.push_doc_comment(&variant.attrs, "about");
@@ -213,6 +217,7 @@ impl Attrs {
         variant: &Variant,
         argument_casing: Sp<CasingStyle>,
         env_casing: Sp<CasingStyle>,
+        prefix: Option<LitStr>,
     ) -> Self {
         let mut res = Self::new(
             variant.span(),
@@ -220,6 +225,7 @@ impl Attrs {
             None,
             argument_casing,
             env_casing,
+            prefix,
         );
         res.push_attrs(&variant.attrs);
         res.push_doc_comment(&variant.attrs, "help");
@@ -256,6 +262,7 @@ impl Attrs {
         field: &Field,
         struct_casing: Sp<CasingStyle>,
         env_casing: Sp<CasingStyle>,
+        prefix: Option<LitStr>,
     ) -> Self {
         let name = field.ident.clone().unwrap();
         let mut res = Self::new(
@@ -264,9 +271,14 @@ impl Attrs {
             Some(field.ty.clone()),
             struct_casing,
             env_casing,
+            prefix.clone(),
         );
         res.push_attrs(&field.attrs);
         res.push_doc_comment(&field.attrs, "help");
+
+        if res.prefix.as_ref().map(LitStr::value) != prefix.as_ref().map(LitStr::value) {
+            abort!(field, "prefix attribute cannot be set on a field, it must be set on the struct");
+        }
 
         match &*res.kind {
             Kind::Flatten => {
@@ -428,12 +440,14 @@ impl Attrs {
         ty: Option<Type>,
         casing: Sp<CasingStyle>,
         env_casing: Sp<CasingStyle>,
+        prefix: Option<LitStr>,
     ) -> Self {
         Self {
             name,
             ty,
             casing,
             env_casing,
+            prefix,
             doc_comment: vec![],
             methods: vec![],
             value_parser: None,
@@ -472,11 +486,16 @@ impl Attrs {
             let attr = attr.clone();
             match attr {
                 Short(ident) => {
+                    if self.prefix.is_some() {
+                        abort!(ident, "short cannot be used when using a prefix");
+                    }
                     self.push_method(ident, self.name.clone().translate_char(*self.casing));
                 }
 
                 Long(ident) => {
-                    self.push_method(ident, self.name.clone().translate(*self.casing));
+                    self.push_method(
+                        ident,
+                        self.name.clone().translate(*self.casing, self.prefix.as_ref()));
                 }
 
                 ValueParser(ident) => {
@@ -490,7 +509,9 @@ impl Attrs {
                 }
 
                 Env(ident) => {
-                    self.push_method(ident, self.name.clone().translate(*self.env_casing));
+                    self.push_method(
+                        ident,
+                        self.name.clone().translate_env(*self.env_casing, self.prefix.as_ref()));
                 }
 
                 ValueEnum(_) => self.is_enum = true,
@@ -804,6 +825,10 @@ impl Attrs {
                     self.env_casing = CasingStyle::from_lit(casing_lit);
                 }
 
+                Prefix(_, prefix) => {
+                    self.prefix = Some(prefix);
+                }
+
                 Parse(ident, spec) => {
                     self.parser = Some(Parser::from_spec(ident, spec));
                 }
@@ -914,11 +939,11 @@ impl Attrs {
     }
 
     pub fn cased_name(&self) -> TokenStream {
-        self.name.clone().translate(*self.casing)
+        self.name.clone().translate(*self.casing, self.prefix.as_ref())
     }
 
     pub fn value_name(&self) -> TokenStream {
-        self.name.clone().translate(CasingStyle::ScreamingSnake)
+        self.name.clone().translate_env(CasingStyle::ScreamingSnake, self.prefix.as_ref())
     }
 
     pub fn value_parser(&self, field_type: &Type) -> Method {
@@ -1016,6 +1041,10 @@ impl Attrs {
 
     pub fn env_casing(&self) -> Sp<CasingStyle> {
         self.env_casing.clone()
+    }
+
+    pub fn prefix(&self) -> Option<LitStr> {
+        self.prefix.clone()
     }
 
     pub fn has_explicit_methods(&self) -> bool {
@@ -1364,13 +1393,37 @@ impl Name {
         }
     }
 
-    pub fn translate(self, style: CasingStyle) -> TokenStream {
+    pub fn translate(self, style: CasingStyle, prefix: Option<&LitStr>) -> TokenStream {
         use CasingStyle::*;
 
         match self {
             Name::Assigned(tokens) => tokens,
             Name::Derived(ident) => {
                 let s = ident.unraw().to_string();
+                let s = match style {
+                    Pascal => s.to_upper_camel_case(),
+                    Kebab => s.to_kebab_case(),
+                    Camel => s.to_lower_camel_case(),
+                    ScreamingSnake => s.to_shouty_snake_case(),
+                    Snake => s.to_snake_case(),
+                    Lower => s.to_snake_case().replace('_', ""),
+                    Upper => s.to_shouty_snake_case().replace('_', ""),
+                    Verbatim => s,
+                };
+                let s = prefix.map(|p| p.value() + "." + &s).unwrap_or(s);
+                quote_spanned!(ident.span()=> #s)
+            }
+        }
+    }
+
+    pub fn translate_env(self, style: CasingStyle, prefix: Option<&LitStr>) -> TokenStream {
+        use CasingStyle::*;
+
+        match self {
+            Name::Assigned(tokens) => tokens,
+            Name::Derived(ident) => {
+                let s = ident.unraw().to_string();
+                let s = prefix.map(|p| p.value() + "." + &s).unwrap_or(s);
                 let s = match style {
                     Pascal => s.to_upper_camel_case(),
                     Kebab => s.to_kebab_case(),

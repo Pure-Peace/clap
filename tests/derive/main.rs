@@ -15,6 +15,7 @@ mod doc_comments_help;
 mod explicit_name_no_renaming;
 mod flags;
 mod flatten;
+mod flatten_and_prefix;
 mod generic;
 mod help;
 mod issues;
