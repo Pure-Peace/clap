@@ -141,6 +141,10 @@ In addition to the raw attributes, the following magic attributes are supported:
 - `rename_all_env = <expr>`: Override default field name case conversion for env variables for  `clap::Arg::env`
   - When not present: `SCREAMING_SNAKE_CASE`
   - Available values: `camelCase`, `kebab-case`, `PascalCase`, `SCREAMING_SNAKE_CASE`, `snake_case`, `lower`, `UPPER`, `verbatim`
+- `prefix = <expr>`: Adds a prefix to the name of all args in the struct. This is useful when `flatten`ing into another struct.
+  - Long flags are prefixed like: `--prefix.name`
+  - Env variables are prefixed like: `PREFIX_NAME`
+  - Short flags cannot be used in a struct with a prefix.
 
 And for `Subcommand` variants:
 - `skip`: Ignore this variant

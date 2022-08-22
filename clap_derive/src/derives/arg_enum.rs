@@ -44,6 +44,7 @@ pub fn gen_for_enum(name: &Ident, attrs: &[Attribute], e: &DataEnum) -> TokenStr
         Name::Derived(name.clone()),
         Sp::call_site(DEFAULT_CASING),
         Sp::call_site(DEFAULT_ENV_CASING),
+        None,
     );
 
     let lits = lits(&e.variants, &attrs);
@@ -82,6 +83,7 @@ fn lits(
                 variant,
                 parent_attribute.casing(),
                 parent_attribute.env_casing(),
+                parent_attribute.prefix(),
             );
             if let Kind::Skip(_) = &*attrs.kind() {
                 None
