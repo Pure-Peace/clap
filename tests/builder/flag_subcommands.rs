@@ -148,7 +148,7 @@ fn flag_subcommand_short_with_aliases_vis_and_hidden() {
                     .long("test")
                     .help("testing testing"),
             )
-            .visible_short_flag_aliases(&['M', 'B'])
+            .visible_short_flag_aliases(['M', 'B'])
             .short_flag_alias('C'),
     );
     let app1 = cmd.clone();
@@ -177,7 +177,7 @@ fn flag_subcommand_short_with_aliases() {
                         .help("testing testing")
                         .action(ArgAction::SetTrue),
                 )
-                .short_flag_aliases(&['M', 'B']),
+                .short_flag_aliases(['M', 'B']),
         )
         .try_get_matches_from(vec!["myprog", "-Bt"])
         .unwrap();
@@ -220,7 +220,7 @@ fn flag_subcommand_short_with_aliases_hyphen() {
                         .long("test")
                         .help("testing testing"),
                 )
-                .short_flag_aliases(&['-', '-', '-']),
+                .short_flag_aliases(['-', '-', '-']),
         )
         .try_get_matches_from(vec!["myprog", "-Bt"])
         .unwrap();
@@ -234,7 +234,7 @@ fn flag_subcommand_short_after_long_arg() {
                 .short_flag('S')
                 .arg(Arg::new("clean").short('c').action(ArgAction::SetTrue)),
         )
-        .arg(Arg::new("arg").long("arg").takes_value(true))
+        .arg(Arg::new("arg").long("arg").action(ArgAction::Set))
         .try_get_matches_from(vec!["pacman", "--arg", "foo", "-Sc"])
         .unwrap();
     let subm = m.subcommand_matches("sync");
@@ -301,7 +301,7 @@ fn flag_subcommand_long_with_aliases() {
                         .help("testing testing")
                         .action(ArgAction::SetTrue),
                 )
-                .long_flag_aliases(&["result", "someall"]),
+                .long_flag_aliases(["result", "someall"]),
         )
         .try_get_matches_from(vec!["myprog", "--result", "--test"])
         .unwrap();
@@ -420,6 +420,7 @@ fn flag_subcommand_long_conflict_with_arg() {
 }
 
 #[test]
+#[should_panic = "the '--help' long flag for the 'help' argument conflicts with the short flag for 'help' subcommand"]
 fn flag_subcommand_conflict_with_help() {
     let _ = Command::new("test")
         .subcommand(Command::new("help").short_flag('h').long_flag("help"))
@@ -428,8 +429,11 @@ fn flag_subcommand_conflict_with_help() {
 }
 
 #[test]
+#[cfg(debug_assertions)]
+#[should_panic = "the '--version' long flag for the 'version' argument conflicts with the short flag for 'ver' subcommand"]
 fn flag_subcommand_conflict_with_version() {
     let _ = Command::new("test")
+        .version("1.0.0")
         .subcommand(Command::new("ver").short_flag('V').long_flag("version"))
         .try_get_matches_from(vec!["myprog", "--version"])
         .unwrap();
@@ -492,16 +496,15 @@ fn flag_subcommand_long_infer_exact_match() {
     assert_eq!(m.subcommand_name(), Some("test"));
 }
 
-static FLAG_SUBCOMMAND_HELP: &str = "pacman-query 
+static FLAG_SUBCOMMAND_HELP: &str = "\
 Query the package database.
 
-USAGE:
-    pacman {query|--query|-Q} [OPTIONS]
+Usage: pacman {query|--query|-Q} [OPTIONS]
 
-OPTIONS:
-    -h, --help                  Print help information
-    -i, --info <info>...        view package information
-    -s, --search <search>...    search locally installed packages for matching strings
+Options:
+  -s, --search <search>...  search locally installed packages for matching strings
+  -i, --info <info>...      view package information
+  -h, --help                Print help information
 ";
 
 #[test]
@@ -525,8 +528,8 @@ fn flag_subcommand_long_short_normal_usage_string() {
                         .long("search")
                         .help("search locally installed packages for matching strings")
                         .conflicts_with("info")
-                        .takes_value(true)
-                        .multiple_values(true),
+                        .action(ArgAction::Set)
+                        .num_args(1..),
                 )
                 .arg(
                     Arg::new("info")
@@ -534,23 +537,22 @@ fn flag_subcommand_long_short_normal_usage_string() {
                         .short('i')
                         .conflicts_with("search")
                         .help("view package information")
-                        .takes_value(true)
-                        .multiple_values(true),
+                        .action(ArgAction::Set)
+                        .num_args(1..),
                 ),
         );
     utils::assert_output(cmd, "pacman -Qh", FLAG_SUBCOMMAND_HELP, false);
 }
 
-static FLAG_SUBCOMMAND_NO_SHORT_HELP: &str = "pacman-query 
+static FLAG_SUBCOMMAND_NO_SHORT_HELP: &str = "\
 Query the package database.
 
-USAGE:
-    pacman {query|--query} [OPTIONS]
+Usage: pacman {query|--query} [OPTIONS]
 
-OPTIONS:
-    -h, --help                  Print help information
-    -i, --info <info>...        view package information
-    -s, --search <search>...    search locally installed packages for matching strings
+Options:
+  -s, --search <search>...  search locally installed packages for matching strings
+  -i, --info <info>...      view package information
+  -h, --help                Print help information
 ";
 
 #[test]
@@ -573,8 +575,8 @@ fn flag_subcommand_long_normal_usage_string() {
                         .long("search")
                         .help("search locally installed packages for matching strings")
                         .conflicts_with("info")
-                        .takes_value(true)
-                        .multiple_values(true),
+                        .action(ArgAction::Set)
+                        .num_args(1..),
                 )
                 .arg(
                     Arg::new("info")
@@ -582,8 +584,8 @@ fn flag_subcommand_long_normal_usage_string() {
                         .short('i')
                         .conflicts_with("search")
                         .help("view package information")
-                        .takes_value(true)
-                        .multiple_values(true),
+                        .action(ArgAction::Set)
+                        .num_args(1..),
                 ),
         );
     utils::assert_output(
@@ -594,16 +596,15 @@ fn flag_subcommand_long_normal_usage_string() {
     );
 }
 
-static FLAG_SUBCOMMAND_NO_LONG_HELP: &str = "pacman-query 
+static FLAG_SUBCOMMAND_NO_LONG_HELP: &str = "\
 Query the package database.
 
-USAGE:
-    pacman {query|-Q} [OPTIONS]
+Usage: pacman {query|-Q} [OPTIONS]
 
-OPTIONS:
-    -h, --help                  Print help information
-    -i, --info <info>...        view package information
-    -s, --search <search>...    search locally installed packages for matching strings
+Options:
+  -s, --search <search>...  search locally installed packages for matching strings
+  -i, --info <info>...      view package information
+  -h, --help                Print help information
 ";
 
 #[test]
@@ -626,8 +627,8 @@ fn flag_subcommand_short_normal_usage_string() {
                         .long("search")
                         .help("search locally installed packages for matching strings")
                         .conflicts_with("info")
-                        .takes_value(true)
-                        .multiple_values(true),
+                        .action(ArgAction::Set)
+                        .num_args(1..),
                 )
                 .arg(
                     Arg::new("info")
@@ -635,8 +636,8 @@ fn flag_subcommand_short_normal_usage_string() {
                         .short('i')
                         .conflicts_with("search")
                         .help("view package information")
-                        .takes_value(true)
-                        .multiple_values(true),
+                        .action(ArgAction::Set)
+                        .num_args(1..),
                 ),
         );
     utils::assert_output(

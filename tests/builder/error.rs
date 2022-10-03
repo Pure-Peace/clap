@@ -1,8 +1,14 @@
 use super::utils;
 
-use clap::{arg, error::ErrorKind, value_parser, Arg, Command, Error};
+use clap::{arg, error::Error, error::ErrorKind, value_parser, Arg, Command};
 
-fn assert_error(err: Error, expected_kind: ErrorKind, expected_output: &str, stderr: bool) {
+#[track_caller]
+fn assert_error<F: clap::error::ErrorFormatter>(
+    err: Error<F>,
+    expected_kind: ErrorKind,
+    expected_output: &str,
+    stderr: bool,
+) {
     let actual_output = err.to_string();
     assert_eq!(
         stderr,
@@ -19,10 +25,9 @@ fn assert_error(err: Error, expected_kind: ErrorKind, expected_output: &str, std
 fn app_error() {
     static MESSAGE: &str = "error: Failed for mysterious reasons
 
-USAGE:
-    test [OPTIONS] --all
+Usage: test [OPTIONS] --all
 
-For more information try --help
+For more information try '--help'
 ";
     let cmd = Command::new("test")
         .arg(
@@ -30,6 +35,7 @@ For more information try --help
                 .short('a')
                 .long("all")
                 .required(true)
+                .action(clap::ArgAction::SetTrue)
                 .help("Also do versioning for private crates (will not be published)"),
         )
         .arg(
@@ -70,4 +76,55 @@ fn value_validation_has_newline() {
         "Errors should have a trailing newline, got {:?}",
         err.to_string()
     );
+}
+
+#[test]
+fn kind_prints_help() {
+    let cmd = Command::new("test");
+    let res = cmd
+        .try_get_matches_from(["test", "--help"])
+        .map_err(|e| e.apply::<clap::error::KindFormatter>());
+    assert!(res.is_err());
+    let err = res.unwrap_err();
+    let expected_kind = ErrorKind::DisplayHelp;
+    static MESSAGE: &str = "\
+Usage: test
+
+Options:
+  -h, --help  Print help information
+";
+    assert_error(err, expected_kind, MESSAGE, false);
+}
+
+#[test]
+fn kind_formats_validation_error() {
+    let cmd = Command::new("test");
+    let res = cmd
+        .try_get_matches_from(["test", "unused"])
+        .map_err(|e| e.apply::<clap::error::KindFormatter>());
+    assert!(res.is_err());
+    let err = res.unwrap_err();
+    let expected_kind = ErrorKind::UnknownArgument;
+    static MESSAGE: &str = "\
+error: Found an argument which wasn't expected or isn't valid in this context
+";
+    assert_error(err, expected_kind, MESSAGE, true);
+}
+
+#[test]
+#[cfg(feature = "error-context")]
+fn rich_formats_validation_error() {
+    let cmd = Command::new("test");
+    let res = cmd.try_get_matches_from(["test", "unused"]);
+    assert!(res.is_err());
+    let err = res.unwrap_err();
+    let expected_kind = ErrorKind::UnknownArgument;
+    static MESSAGE: &str = "\
+error: Found argument 'unused' which wasn't expected, or isn't valid in this context
+
+Usage: test
+
+For more information try '--help'
+";
+    assert_error(err, expected_kind, MESSAGE, true);
 }

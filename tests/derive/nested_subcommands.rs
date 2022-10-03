@@ -16,11 +16,11 @@ use clap::{Parser, Subcommand};
 
 #[derive(Parser, PartialEq, Debug)]
 struct Opt {
-    #[clap(short, long, action)]
+    #[arg(short, long)]
     force: bool,
-    #[clap(short, long, action = clap::ArgAction::Count)]
+    #[arg(short, long, action = clap::ArgAction::Count)]
     verbose: u8,
-    #[clap(subcommand)]
+    #[command(subcommand)]
     cmd: Sub,
 }
 
@@ -32,11 +32,11 @@ enum Sub {
 
 #[derive(Parser, PartialEq, Debug)]
 struct Opt2 {
-    #[clap(short, long, action)]
+    #[arg(short, long)]
     force: bool,
-    #[clap(short, long, action = clap::ArgAction::Count)]
+    #[arg(short, long, action = clap::ArgAction::Count)]
     verbose: u8,
-    #[clap(subcommand)]
+    #[command(subcommand)]
     cmd: Option<Sub>,
 }
 
@@ -109,18 +109,17 @@ fn test_badinput() {
 
 #[derive(Parser, PartialEq, Debug)]
 struct Opt3 {
-    #[clap(short, long, action)]
+    #[arg(short, long)]
     all: bool,
-    #[clap(subcommand)]
+    #[command(subcommand)]
     cmd: Sub2,
 }
 
 #[derive(Subcommand, PartialEq, Debug)]
 enum Sub2 {
     Foo {
-        #[clap(value_parser)]
         file: String,
-        #[clap(subcommand)]
+        #[command(subcommand)]
         cmd: Sub3,
     },
     Bar {},
@@ -149,26 +148,18 @@ fn test_subsubcommand() {
 #[derive(Parser, PartialEq, Debug)]
 enum SubSubCmdWithOption {
     Remote {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         cmd: Option<Remote>,
     },
     Stash {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         cmd: Stash,
     },
 }
 #[derive(Subcommand, PartialEq, Debug)]
 enum Remote {
-    Add {
-        #[clap(value_parser)]
-        name: String,
-        #[clap(value_parser)]
-        url: String,
-    },
-    Remove {
-        #[clap(value_parser)]
-        name: String,
-    },
+    Add { name: String, url: String },
+    Remove { name: String },
 }
 
 #[derive(Subcommand, PartialEq, Debug)]

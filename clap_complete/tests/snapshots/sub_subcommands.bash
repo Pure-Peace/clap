@@ -8,21 +8,45 @@ _my-app() {
 
     for i in ${COMP_WORDS[@]}
     do
-        case "${i}" in
-            "$1")
+        case "${cmd},${i}" in
+            ",$1")
                 cmd="my__app"
                 ;;
-            help)
-                cmd+="__help"
+            my__app,help)
+                cmd="my__app__help"
                 ;;
-            some_cmd)
-                cmd+="__some_cmd"
+            my__app,some_cmd)
+                cmd="my__app__some_cmd"
                 ;;
-            sub_cmd)
-                cmd+="__sub_cmd"
+            my__app,some_cmd_alias)
+                cmd="my__app__some_cmd"
                 ;;
-            test)
-                cmd+="__test"
+            my__app,test)
+                cmd="my__app__test"
+                ;;
+            my__app__help,help)
+                cmd="my__app__help__help"
+                ;;
+            my__app__help,some_cmd)
+                cmd="my__app__help__some_cmd"
+                ;;
+            my__app__help,test)
+                cmd="my__app__help__test"
+                ;;
+            my__app__help__some_cmd,sub_cmd)
+                cmd="my__app__help__some_cmd__sub_cmd"
+                ;;
+            my__app__some_cmd,help)
+                cmd="my__app__some_cmd__help"
+                ;;
+            my__app__some_cmd,sub_cmd)
+                cmd="my__app__some_cmd__sub_cmd"
+                ;;
+            my__app__some_cmd__help,help)
+                cmd="my__app__some_cmd__help__help"
+                ;;
+            my__app__some_cmd__help,sub_cmd)
+                cmd="my__app__some_cmd__help__sub_cmd"
                 ;;
             *)
                 ;;
@@ -31,7 +55,7 @@ _my-app() {
 
     case "${cmd}" in
         my__app)
-            opts="-h -V -C -c --help --version --conf --config <file> first second test some_cmd help"
+            opts="-C -c -h -V --conf --config --help --version [file] first second test some_cmd help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -45,8 +69,64 @@ _my-app() {
             return 0
             ;;
         my__app__help)
-            opts="<SUBCOMMAND>..."
+            opts="test some_cmd help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        my__app__help__help)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        my__app__help__some_cmd)
+            opts="sub_cmd"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        my__app__help__some_cmd__sub_cmd)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        my__app__help__test)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
@@ -73,8 +153,36 @@ _my-app() {
             return 0
             ;;
         my__app__some_cmd__help)
-            opts="<SUBCOMMAND>..."
+            opts="sub_cmd help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        my__app__some_cmd__help__help)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        my__app__some_cmd__help__sub_cmd)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
@@ -94,7 +202,7 @@ _my-app() {
             fi
             case "${prev}" in
                 --config)
-                    COMPREPLY=($(compgen -W "Lest quotes aren't escaped." -- "${cur}"))
+                    COMPREPLY=($(compgen -W "Lest quotes, aren't escaped. Second to trigger display of options" -- "${cur}"))
                     return 0
                     ;;
                 *)

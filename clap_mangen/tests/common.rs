@@ -1,15 +1,29 @@
-pub fn basic_command(name: &'static str) -> clap::Command<'static> {
+use clap::builder::PossibleValue;
+
+pub fn basic_command(name: &'static str) -> clap::Command {
     clap::Command::new(name)
-        .arg(clap::Arg::new("config").short('c').global(true))
-        .arg(clap::Arg::new("v").short('v').conflicts_with("config"))
+        .arg(
+            clap::Arg::new("config")
+                .short('c')
+                .global(true)
+                .action(clap::ArgAction::SetTrue),
+        )
+        .arg(
+            clap::Arg::new("v")
+                .short('v')
+                .conflicts_with("config")
+                .action(clap::ArgAction::SetTrue),
+        )
         .subcommand(
-            clap::Command::new("test")
-                .about("Subcommand")
-                .arg(clap::Arg::new("debug").short('d')),
+            clap::Command::new("test").about("Subcommand").arg(
+                clap::Arg::new("debug")
+                    .short('d')
+                    .action(clap::ArgAction::Count),
+            ),
         )
 }
 
-pub fn feature_sample_command(name: &'static str) -> clap::Command<'static> {
+pub fn feature_sample_command(name: &'static str) -> clap::Command {
     clap::Command::new(name)
         .version("3.0")
         .propagate_version(true)
@@ -21,6 +35,7 @@ pub fn feature_sample_command(name: &'static str) -> clap::Command<'static> {
         )
         .arg(
             clap::Arg::new("config")
+                .action(clap::ArgAction::Count)
                 .help("some config file")
                 .short('c')
                 .visible_short_alias('C')
@@ -32,13 +47,13 @@ pub fn feature_sample_command(name: &'static str) -> clap::Command<'static> {
             clap::Command::new("test").about("tests things").arg(
                 clap::Arg::new("case")
                     .long("case")
-                    .takes_value(true)
+                    .action(clap::ArgAction::Set)
                     .help("the case to test"),
             ),
         )
 }
 
-pub fn special_commands_command(name: &'static str) -> clap::Command<'static> {
+pub fn special_commands_command(name: &'static str) -> clap::Command {
     feature_sample_command(name)
         .subcommand(
             clap::Command::new("some_cmd")
@@ -46,44 +61,50 @@ pub fn special_commands_command(name: &'static str) -> clap::Command<'static> {
                 .arg(
                     clap::Arg::new("config")
                         .long("config")
-                        .takes_value(true)
+                        .action(clap::ArgAction::Set)
                         .help("the other case to test"),
                 ),
         )
         .subcommand(clap::Command::new("some-cmd-with-hyphens").alias("hyphen"))
 }
 
-pub fn quoting_command(name: &'static str) -> clap::Command<'static> {
+pub fn quoting_command(name: &'static str) -> clap::Command {
     clap::Command::new(name)
         .version("3.0")
         .arg(
             clap::Arg::new("single-quotes")
                 .long("single-quotes")
+                .action(clap::ArgAction::SetTrue)
                 .help("Can be 'always', 'auto', or 'never'"),
         )
         .arg(
             clap::Arg::new("double-quotes")
                 .long("double-quotes")
+                .action(clap::ArgAction::SetTrue)
                 .help("Can be \"always\", \"auto\", or \"never\""),
         )
         .arg(
             clap::Arg::new("backticks")
                 .long("backticks")
+                .action(clap::ArgAction::SetTrue)
                 .help("For more information see `echo test`"),
         )
         .arg(
             clap::Arg::new("backslash")
                 .long("backslash")
+                .action(clap::ArgAction::SetTrue)
                 .help("Avoid '\\n'"),
         )
         .arg(
             clap::Arg::new("brackets")
                 .long("brackets")
+                .action(clap::ArgAction::SetTrue)
                 .help("List packages [filter]"),
         )
         .arg(
             clap::Arg::new("expansions")
                 .long("expansions")
+                .action(clap::ArgAction::SetTrue)
                 .help("Execute the shell command with $SHELL"),
         )
         .subcommands([
@@ -97,7 +118,7 @@ pub fn quoting_command(name: &'static str) -> clap::Command<'static> {
         ])
 }
 
-pub fn aliases_command(name: &'static str) -> clap::Command<'static> {
+pub fn aliases_command(name: &'static str) -> clap::Command {
     clap::Command::new(name)
         .version("3.0")
         .about("testing bash completions")
@@ -106,6 +127,7 @@ pub fn aliases_command(name: &'static str) -> clap::Command<'static> {
                 .short('f')
                 .visible_short_alias('F')
                 .long("flag")
+                .action(clap::ArgAction::SetTrue)
                 .visible_alias("flg")
                 .help("cmd flag"),
         )
@@ -116,12 +138,12 @@ pub fn aliases_command(name: &'static str) -> clap::Command<'static> {
                 .long("option")
                 .visible_alias("opt")
                 .help("cmd option")
-                .takes_value(true),
+                .action(clap::ArgAction::Set),
         )
         .arg(clap::Arg::new("positional"))
 }
 
-pub fn sub_subcommands_command(name: &'static str) -> clap::Command<'static> {
+pub fn sub_subcommands_command(name: &'static str) -> clap::Command {
     feature_sample_command(name).subcommand(
         clap::Command::new("some_cmd")
             .about("top level subcommand")
@@ -129,21 +151,22 @@ pub fn sub_subcommands_command(name: &'static str) -> clap::Command<'static> {
                 clap::Command::new("sub_cmd").about("sub-subcommand").arg(
                     clap::Arg::new("config")
                         .long("config")
-                        .takes_value(true)
-                        .value_parser([clap::PossibleValue::new("Lest quotes aren't escaped.")])
+                        .action(clap::ArgAction::Set)
+                        .value_parser([clap::builder::PossibleValue::new(
+                            "Lest quotes aren't escaped.",
+                        )])
                         .help("the other case to test"),
                 ),
             ),
     )
 }
 
-pub fn value_hint_command(name: &'static str) -> clap::Command<'static> {
+pub fn value_hint_command(name: &'static str) -> clap::Command {
     clap::Command::new(name)
-        .trailing_var_arg(true)
         .arg(
             clap::Arg::new("choice")
                 .long("choice")
-                .takes_value(true)
+                .action(clap::ArgAction::Set)
                 .value_parser(["bash", "fish", "zsh"]),
         )
         .arg(
@@ -193,8 +216,9 @@ pub fn value_hint_command(name: &'static str) -> clap::Command<'static> {
         )
         .arg(
             clap::Arg::new("command_with_args")
-                .takes_value(true)
-                .multiple_values(true)
+                .action(clap::ArgAction::Set)
+                .num_args(1..)
+                .trailing_var_arg(true)
                 .value_hint(clap::ValueHint::CommandWithArguments),
         )
         .arg(
@@ -205,7 +229,7 @@ pub fn value_hint_command(name: &'static str) -> clap::Command<'static> {
         )
         .arg(
             clap::Arg::new("host")
-                .short('h')
+                .short('H')
                 .long("host")
                 .value_hint(clap::ValueHint::Hostname),
         )
@@ -221,9 +245,13 @@ pub fn value_hint_command(name: &'static str) -> clap::Command<'static> {
         )
 }
 
-pub fn hidden_option_command(name: &'static str) -> clap::Command<'static> {
+pub fn hidden_option_command(name: &'static str) -> clap::Command {
     clap::Command::new(name)
-        .arg(clap::Arg::new("config").long("config").takes_value(true))
+        .arg(
+            clap::Arg::new("config")
+                .long("config")
+                .action(clap::ArgAction::Set),
+        )
         .arg(
             clap::Arg::new("no-config")
                 .long("no-config")
@@ -232,13 +260,13 @@ pub fn hidden_option_command(name: &'static str) -> clap::Command<'static> {
         )
 }
 
-pub fn env_value_command(name: &'static str) -> clap::Command<'static> {
+pub fn env_value_command(name: &'static str) -> clap::Command {
     clap::Command::new(name).arg(
         clap::Arg::new("config")
             .short('c')
             .long_help("Set configuration file path")
             .required(false)
-            .takes_value(true)
+            .action(clap::ArgAction::Set)
             .default_value("config.toml")
             .env("CONFIG_FILE"),
     )
@@ -251,4 +279,36 @@ pub fn assert_matches_path(expected_path: impl AsRef<std::path::Path>, cmd: clap
     snapbox::Assert::new()
         .action_env("SNAPSHOTS")
         .matches_path(expected_path, buf);
+}
+
+pub fn possible_values_command(name: &'static str) -> clap::Command {
+    clap::Command::new(name)
+        .arg(
+            clap::Arg::new("choice")
+                .long("choice")
+                .action(clap::ArgAction::Set)
+                .value_parser(["bash", "fish", "zsh"]),
+        )
+        .arg(
+            clap::Arg::new("method")
+                .long("method")
+                .action(clap::ArgAction::Set)
+                .value_parser([
+                    PossibleValue::new("fast").help("use the Fast method"),
+                    PossibleValue::new("slow").help("use the slow method"),
+                    PossibleValue::new("normal")
+                        .help("use normal mode")
+                        .hide(true),
+                ]),
+        )
+        .arg(
+            clap::Arg::new("positional_choice")
+                .action(clap::ArgAction::Set)
+                .help("Pick the Position you want the command to run in")
+                .value_parser([
+                    PossibleValue::new("left").help("run left adjusted"),
+                    PossibleValue::new("right"),
+                    PossibleValue::new("center").hide(true),
+                ]),
+        )
 }

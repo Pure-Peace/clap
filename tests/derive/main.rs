@@ -1,7 +1,6 @@
 #![cfg(feature = "derive")]
-
-mod legacy;
-mod next;
+#![cfg(feature = "help")]
+#![cfg(feature = "usage")]
 
 mod app_name;
 mod arguments;
@@ -17,6 +16,7 @@ mod flags;
 mod flatten;
 mod flatten_and_prefix;
 mod generic;
+mod groups;
 mod help;
 mod issues;
 mod macros;
@@ -29,7 +29,6 @@ mod raw_bool_literal;
 mod raw_idents;
 mod rename_all_env;
 mod skip;
-mod structopt;
 mod subcommands;
 mod type_alias_regressions;
 mod utf8;

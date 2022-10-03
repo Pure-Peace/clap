@@ -7,12 +7,15 @@
 
 use clap::CommandFactory;
 
+pub const FULL_TEMPLATE: &str = "\
+{before-help}{name} {version}
+{author-with-newline}{about-with-newline}
+{usage-heading} {usage}
+
+{all-args}{after-help}";
+
 pub fn get_help<T: CommandFactory>() -> String {
-    let mut output = Vec::new();
-    <T as CommandFactory>::command()
-        .write_help(&mut output)
-        .unwrap();
-    let output = String::from_utf8(output).unwrap();
+    let output = <T as CommandFactory>::command().render_help().to_string();
 
     eprintln!("\n%%% HELP %%%:=====\n{}\n=====\n", output);
     eprintln!("\n%%% HELP (DEBUG) %%%:=====\n{:?}\n=====\n", output);
@@ -21,11 +24,9 @@ pub fn get_help<T: CommandFactory>() -> String {
 }
 
 pub fn get_long_help<T: CommandFactory>() -> String {
-    let mut output = Vec::new();
-    <T as CommandFactory>::command()
-        .write_long_help(&mut output)
-        .unwrap();
-    let output = String::from_utf8(output).unwrap();
+    let output = <T as CommandFactory>::command()
+        .render_long_help()
+        .to_string();
 
     eprintln!("\n%%% LONG_HELP %%%:=====\n{}\n=====\n", output);
     eprintln!("\n%%% LONG_HELP (DEBUG) %%%:=====\n{:?}\n=====\n", output);
@@ -34,14 +35,12 @@ pub fn get_long_help<T: CommandFactory>() -> String {
 }
 
 pub fn get_subcommand_long_help<T: CommandFactory>(subcmd: &str) -> String {
-    let mut output = Vec::new();
-    <T as CommandFactory>::command()
+    let output = <T as CommandFactory>::command()
         .get_subcommands_mut()
         .find(|s| s.get_name() == subcmd)
         .unwrap()
-        .write_long_help(&mut output)
-        .unwrap();
-    let output = String::from_utf8(output).unwrap();
+        .render_long_help()
+        .to_string();
 
     eprintln!(
         "\n%%% SUBCOMMAND `{}` HELP %%%:=====\n{}\n=====\n",
@@ -53,4 +52,19 @@ pub fn get_subcommand_long_help<T: CommandFactory>(subcmd: &str) -> String {
     );
 
     output
+}
+
+#[track_caller]
+pub fn assert_output<P: clap::Parser + std::fmt::Debug>(args: &str, expected: &str, stderr: bool) {
+    let res = P::try_parse_from(args.split(' ').collect::<Vec<_>>());
+    let err = res.unwrap_err();
+    let actual = err.render().to_string();
+    assert_eq!(
+        stderr,
+        err.use_stderr(),
+        "Should Use STDERR failed. Should be {} but is {}",
+        stderr,
+        err.use_stderr()
+    );
+    snapbox::assert_eq(expected, actual)
 }

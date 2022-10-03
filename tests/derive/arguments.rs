@@ -12,14 +12,14 @@
 // commit#ea76fa1b1b273e65e3b0b1046643715b49bec51f which is licensed under the
 // MIT/Apache 2.0 license.
 
-use clap::CommandFactory;
 use clap::Parser;
+
+use crate::utils::get_help;
 
 #[test]
 fn required_argument() {
     #[derive(Parser, PartialEq, Debug)]
     struct Opt {
-        #[clap(value_parser)]
         arg: i32,
     }
     assert_eq!(
@@ -34,7 +34,7 @@ fn required_argument() {
 fn argument_with_default() {
     #[derive(Parser, PartialEq, Debug)]
     struct Opt {
-        #[clap(value_parser, default_value = "42")]
+        #[arg(default_value = "42")]
         arg: i32,
     }
     assert_eq!(
@@ -49,13 +49,10 @@ fn argument_with_default() {
 fn auto_value_name() {
     #[derive(Parser, PartialEq, Debug)]
     struct Opt {
-        #[clap(value_parser)]
         my_special_arg: i32,
     }
 
-    let mut help = Vec::new();
-    Opt::command().write_help(&mut help).unwrap();
-    let help = String::from_utf8(help).unwrap();
+    let help = get_help::<Opt>();
 
     assert!(help.contains("MY_SPECIAL_ARG"));
     // Ensure the implicit `num_vals` is just 1
@@ -69,13 +66,11 @@ fn auto_value_name() {
 fn explicit_value_name() {
     #[derive(Parser, PartialEq, Debug)]
     struct Opt {
-        #[clap(value_parser, value_name = "BROWNIE_POINTS")]
+        #[arg(value_name = "BROWNIE_POINTS")]
         my_special_arg: i32,
     }
 
-    let mut help = Vec::new();
-    Opt::command().write_help(&mut help).unwrap();
-    let help = String::from_utf8(help).unwrap();
+    let help = get_help::<Opt>();
 
     assert!(help.contains("BROWNIE_POINTS"));
     assert!(!help.contains("MY_SPECIAL_ARG"));
@@ -90,7 +85,6 @@ fn explicit_value_name() {
 fn option_type_is_optional() {
     #[derive(Parser, PartialEq, Debug)]
     struct Opt {
-        #[clap(value_parser)]
         arg: Option<i32>,
     }
     assert_eq!(
@@ -105,7 +99,6 @@ fn option_type_is_optional() {
 fn vec_type_is_multiple_values() {
     #[derive(Parser, PartialEq, Debug)]
     struct Opt {
-        #[clap(value_parser)]
         arg: Vec<i32>,
     }
     assert_eq!(
@@ -118,7 +111,7 @@ fn vec_type_is_multiple_values() {
         Opt::try_parse_from(&["test", "24", "42"]).unwrap()
     );
     assert_eq!(
-        clap::ErrorKind::ValueValidation,
+        clap::error::ErrorKind::ValueValidation,
         Opt::try_parse_from(&["test", "NOPE"]).err().unwrap().kind()
     );
 }

@@ -10,16 +10,16 @@ use clap::Parser;
 
 #[derive(Parser, Debug)]
 struct DaemonOpts {
-    #[clap(short, value_parser)]
+    #[arg(short)]
     user: String,
-    #[clap(short, value_parser)]
+    #[arg(short)]
     group: String,
 }
 
 #[derive(Parser, Debug)]
-#[clap(name = "basic")]
+#[command(name = "basic")]
 struct Opt {
-    #[clap(short, flatten)]
+    #[command(flatten, version = "foo")]
     opts: DaemonOpts,
 }
 

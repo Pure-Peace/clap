@@ -1,101 +1,6 @@
-use super::utils;
-
 use clap::{arg, error::ErrorKind, Arg, ArgAction, Command};
 
-static VISIBLE_ALIAS_HELP: &str = "clap-test 2.6
-
-USAGE:
-    clap-test [SUBCOMMAND]
-
-OPTIONS:
-    -h, --help       Print help information
-    -V, --version    Print version information
-
-SUBCOMMANDS:
-    help    Print this message or the help of the given subcommand(s)
-    test    Some help [aliases: dongle, done]
-";
-
-static INVISIBLE_ALIAS_HELP: &str = "clap-test 2.6
-
-USAGE:
-    clap-test [SUBCOMMAND]
-
-OPTIONS:
-    -h, --help       Print help information
-    -V, --version    Print version information
-
-SUBCOMMANDS:
-    help    Print this message or the help of the given subcommand(s)
-    test    Some help
-";
-
-static SUBCMD_ALPHA_ORDER: &str = "test 1
-
-USAGE:
-    test [SUBCOMMAND]
-
-OPTIONS:
-    -h, --help       Print help information
-    -V, --version    Print version information
-
-SUBCOMMANDS:
-    a1      blah a1
-    b1      blah b1
-    help    Print this message or the help of the given subcommand(s)
-";
-
-static SUBCMD_DECL_ORDER: &str = "test 1
-
-USAGE:
-    test [SUBCOMMAND]
-
-OPTIONS:
-    -h, --help       Print help information
-    -V, --version    Print version information
-
-SUBCOMMANDS:
-    b1      blah b1
-    a1      blah a1
-    help    Print this message or the help of the given subcommand(s)
-";
-
-#[cfg(feature = "suggestions")]
-static DYM_SUBCMD: &str = "error: The subcommand 'subcm' wasn't recognized
-
-	Did you mean 'subcmd'?
-
-If you believe you received this message in error, try re-running with 'dym -- subcm'
-
-USAGE:
-    dym [SUBCOMMAND]
-
-For more information try --help
-";
-
-#[cfg(feature = "suggestions")]
-static DYM_SUBCMD_AMBIGUOUS: &str = "error: The subcommand 'te' wasn't recognized
-
-	Did you mean 'test' or 'temp'?
-
-If you believe you received this message in error, try re-running with 'dym -- te'
-
-USAGE:
-    dym [SUBCOMMAND]
-
-For more information try --help
-";
-
-static SUBCMD_AFTER_DOUBLE_DASH: &str =
-    "error: Found argument 'subcmd' which wasn't expected, or isn't valid in this context
-
-\tIf you tried to supply `subcmd` as a subcommand, remove the '--' before it.
-
-USAGE:
-    cmd [SUBCOMMAND]
-
-For more information try --help
-";
+use super::utils;
 
 #[test]
 fn subcommand() {
@@ -105,7 +10,7 @@ fn subcommand() {
                 Arg::new("test")
                     .short('t')
                     .long("test")
-                    .takes_value(true)
+                    .action(ArgAction::Set)
                     .help("testing testing"),
             ),
         )
@@ -130,7 +35,7 @@ fn subcommand_none_given() {
                 Arg::new("test")
                     .short('t')
                     .long("test")
-                    .takes_value(true)
+                    .action(ArgAction::Set)
                     .help("testing testing"),
             ),
         )
@@ -149,7 +54,7 @@ fn subcommand_multiple() {
                 Arg::new("test")
                     .short('t')
                     .long("test")
-                    .takes_value(true)
+                    .action(ArgAction::Set)
                     .help("testing testing"),
             ),
             Command::new("add").arg(Arg::new("roster").short('r')),
@@ -170,44 +75,6 @@ fn subcommand_multiple() {
 }
 
 #[test]
-fn subcommand_display_order() {
-    let app_subcmd_alpha_order = Command::new("test").version("1").subcommands(vec![
-        Command::new("b1")
-            .about("blah b1")
-            .arg(Arg::new("test").short('t')),
-        Command::new("a1")
-            .about("blah a1")
-            .arg(Arg::new("roster").short('r')),
-    ]);
-
-    utils::assert_output(
-        app_subcmd_alpha_order,
-        "test --help",
-        SUBCMD_ALPHA_ORDER,
-        false,
-    );
-
-    let app_subcmd_decl_order = Command::new("test")
-        .version("1")
-        .setting(clap::AppSettings::DeriveDisplayOrder)
-        .subcommands(vec![
-            Command::new("b1")
-                .about("blah b1")
-                .arg(Arg::new("test").short('t')),
-            Command::new("a1")
-                .about("blah a1")
-                .arg(Arg::new("roster").short('r')),
-        ]);
-
-    utils::assert_output(
-        app_subcmd_decl_order,
-        "test --help",
-        SUBCMD_DECL_ORDER,
-        false,
-    );
-}
-
-#[test]
 fn single_alias() {
     let m = Command::new("myprog")
         .subcommand(Command::new("test").alias("do-stuff"))
@@ -219,7 +86,7 @@ fn single_alias() {
 #[test]
 fn multiple_aliases() {
     let m = Command::new("myprog")
-        .subcommand(Command::new("test").aliases(&["do-stuff", "test-stuff"]))
+        .subcommand(Command::new("test").aliases(["do-stuff", "test-stuff"]))
         .try_get_matches_from(vec!["myprog", "test-stuff"])
         .unwrap();
     assert_eq!(m.subcommand_name(), Some("test"));
@@ -227,14 +94,42 @@ fn multiple_aliases() {
 
 #[test]
 #[cfg(feature = "suggestions")]
+#[cfg(feature = "error-context")]
 fn subcmd_did_you_mean_output() {
+    #[cfg(feature = "suggestions")]
+    static DYM_SUBCMD: &str = "\
+error: The subcommand 'subcm' wasn't recognized
+
+  Did you mean 'subcmd'?
+
+If you believe you received this message in error, try re-running with 'dym -- subcm'
+
+Usage: dym [COMMAND]
+
+For more information try '--help'
+";
+
     let cmd = Command::new("dym").subcommand(Command::new("subcmd"));
     utils::assert_output(cmd, "dym subcm", DYM_SUBCMD, true);
 }
 
 #[test]
 #[cfg(feature = "suggestions")]
+#[cfg(feature = "error-context")]
 fn subcmd_did_you_mean_output_ambiguous() {
+    #[cfg(feature = "suggestions")]
+    static DYM_SUBCMD_AMBIGUOUS: &str = "\
+error: The subcommand 'te' wasn't recognized
+
+  Did you mean 'test' or 'temp'?
+
+If you believe you received this message in error, try re-running with 'dym -- te'
+
+Usage: dym [COMMAND]
+
+For more information try '--help'
+";
+
     let cmd = Command::new("dym")
         .subcommand(Command::new("test"))
         .subcommand(Command::new("temp"));
@@ -243,44 +138,42 @@ fn subcmd_did_you_mean_output_ambiguous() {
 
 #[test]
 #[cfg(feature = "suggestions")]
+#[cfg(feature = "error-context")]
 fn subcmd_did_you_mean_output_arg() {
-    static EXPECTED: &str =
-        "error: Found argument '--subcmarg' which wasn't expected, or isn't valid in this context
+    static EXPECTED: &str = "\
+error: Found argument '--subcmarg' which wasn't expected, or isn't valid in this context
 
-\tDid you mean to put '--subcmdarg' after the subcommand 'subcmd'?
+  Did you mean to put '--subcmdarg' after the subcommand 'subcmd'?
 
-\tIf you tried to supply `--subcmarg` as a value rather than a flag, use `-- --subcmarg`
+  If you tried to supply '--subcmarg' as a value rather than a flag, use '-- --subcmarg'
 
-USAGE:
-    dym [SUBCOMMAND]
+Usage: dym [COMMAND]
 
-For more information try --help
+For more information try '--help'
 ";
 
-    let cmd = Command::new("dym").subcommand(
-        Command::new("subcmd").arg(arg!(-s --subcmdarg <subcmdarg> "tests").required(false)),
-    );
+    let cmd = Command::new("dym")
+        .subcommand(Command::new("subcmd").arg(arg!(-s --subcmdarg <subcmdarg> "tests")));
 
     utils::assert_output(cmd, "dym --subcmarg subcmd", EXPECTED, true);
 }
 
 #[test]
 #[cfg(feature = "suggestions")]
+#[cfg(feature = "error-context")]
 fn subcmd_did_you_mean_output_arg_false_positives() {
-    static EXPECTED: &str =
-        "error: Found argument '--subcmarg' which wasn't expected, or isn't valid in this context
+    static EXPECTED: &str = "\
+error: Found argument '--subcmarg' which wasn't expected, or isn't valid in this context
 
-\tIf you tried to supply `--subcmarg` as a value rather than a flag, use `-- --subcmarg`
+  If you tried to supply '--subcmarg' as a value rather than a flag, use '-- --subcmarg'
 
-USAGE:
-    dym [SUBCOMMAND]
+Usage: dym [COMMAND]
 
-For more information try --help
+For more information try '--help'
 ";
 
-    let cmd = Command::new("dym").subcommand(
-        Command::new("subcmd").arg(arg!(-s --subcmdarg <subcmdarg> "tests").required(false)),
-    );
+    let cmd = Command::new("dym")
+        .subcommand(Command::new("subcmd").arg(arg!(-s --subcmdarg <subcmdarg> "tests")));
 
     utils::assert_output(cmd, "dym --subcmarg foo", EXPECTED, true);
 }
@@ -296,6 +189,18 @@ fn alias_help() {
 
 #[test]
 fn visible_aliases_help_output() {
+    static VISIBLE_ALIAS_HELP: &str = "\
+Usage: clap-test [COMMAND]
+
+Commands:
+  test  Some help [aliases: dongle, done]
+  help  Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help     Print help information
+  -V, --version  Print version information
+";
+
     let cmd = Command::new("clap-test").version("2.6").subcommand(
         Command::new("test")
             .about("Some help")
@@ -308,6 +213,18 @@ fn visible_aliases_help_output() {
 
 #[test]
 fn invisible_aliases_help_output() {
+    static INVISIBLE_ALIAS_HELP: &str = "\
+Usage: clap-test [COMMAND]
+
+Commands:
+  test  Some help
+  help  Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help     Print help information
+  -V, --version  Print version information
+";
+
     let cmd = Command::new("clap-test")
         .version("2.6")
         .subcommand(Command::new("test").about("Some help").alias("invisible"));
@@ -335,7 +252,7 @@ fn replace() {
 #[test]
 fn issue_1031_args_with_same_name() {
     let res = Command::new("prog")
-        .arg(arg!(--"ui-path" <PATH>))
+        .arg(arg!(--"ui-path" <PATH>).required(true))
         .subcommand(Command::new("signer"))
         .try_get_matches_from(vec!["prog", "--ui-path", "signer"]);
 
@@ -350,7 +267,7 @@ fn issue_1031_args_with_same_name() {
 #[test]
 fn issue_1031_args_with_same_name_no_more_vals() {
     let res = Command::new("prog")
-        .arg(arg!(--"ui-path" <PATH>))
+        .arg(arg!(--"ui-path" <PATH>).required(true))
         .subcommand(Command::new("signer"))
         .try_get_matches_from(vec!["prog", "--ui-path", "value", "signer"]);
 
@@ -368,11 +285,11 @@ fn issue_1161_multiple_hyphen_hyphen() {
     // from example 22
     let res = Command::new("myprog")
         .arg(Arg::new("eff").short('f'))
-        .arg(Arg::new("pea").short('p').takes_value(true))
+        .arg(Arg::new("pea").short('p').action(ArgAction::Set))
         .arg(
             Arg::new("slop")
-                .takes_value(true)
-                .multiple_values(true)
+                .action(ArgAction::Set)
+                .num_args(1..)
                 .last(true),
         )
         .try_get_matches_from(vec![
@@ -426,19 +343,29 @@ fn subcommand_placeholder_test() {
         .subcommand_value_name("TEST_PLACEHOLDER")
         .subcommand_help_heading("TEST_HEADER");
 
-    assert_eq!(&cmd.render_usage(), "USAGE:\n    myprog [TEST_PLACEHOLDER]");
+    assert_eq!(
+        &cmd.render_usage().to_string(),
+        "Usage: myprog [TEST_PLACEHOLDER]"
+    );
 
-    let mut help_text = Vec::new();
-    cmd.write_help(&mut help_text)
-        .expect("Failed to write to internal buffer");
+    let help_text = cmd.render_help().to_string();
 
-    assert!(String::from_utf8(help_text)
-        .unwrap()
-        .contains("TEST_HEADER:"));
+    assert!(help_text.contains("TEST_HEADER:"));
 }
 
 #[test]
+#[cfg(feature = "error-context")]
 fn subcommand_used_after_double_dash() {
+    static SUBCMD_AFTER_DOUBLE_DASH: &str = "\
+error: Found argument 'subcmd' which wasn't expected, or isn't valid in this context
+
+  If you tried to supply 'subcmd' as a subcommand, remove the '--' before it.
+
+Usage: cmd [COMMAND]
+
+For more information try '--help'
+";
+
     let cmd = Command::new("cmd").subcommand(Command::new("subcmd"));
 
     utils::assert_output(cmd, "cmd -- subcmd", SUBCMD_AFTER_DOUBLE_DASH, true);
@@ -498,6 +425,7 @@ fn issue_2494_subcommand_is_present() {
 }
 
 #[test]
+#[cfg(feature = "error-context")]
 fn subcommand_not_recognized() {
     let cmd = Command::new("fake")
         .subcommand(Command::new("sub"))
@@ -508,10 +436,9 @@ fn subcommand_not_recognized() {
         "fake help",
         "error: The subcommand 'help' wasn't recognized
 
-USAGE:
-    fake [SUBCOMMAND]
+Usage: fake [COMMAND]
 
-For more information try --help
+For more information try '--help'
 ",
         true,
     );
@@ -519,7 +446,7 @@ For more information try --help
 
 #[test]
 fn busybox_like_multicall() {
-    fn applet_commands() -> [Command<'static>; 2] {
+    fn applet_commands() -> [Command; 2] {
         [Command::new("true"), Command::new("false")]
     }
     let cmd = Command::new("busybox")
@@ -539,7 +466,7 @@ fn busybox_like_multicall() {
 
     let m = cmd.clone().try_get_matches_from(&["a.out"]);
     assert!(m.is_err());
-    assert_eq!(m.unwrap_err().kind(), ErrorKind::UnrecognizedSubcommand);
+    assert_eq!(m.unwrap_err().kind(), ErrorKind::InvalidSubcommand);
 }
 
 #[test]
@@ -560,7 +487,7 @@ fn hostname_like_multicall() {
 
     let m = cmd.clone().try_get_matches_from(&["a.out"]);
     assert!(m.is_err());
-    assert_eq!(m.unwrap_err().kind(), ErrorKind::UnrecognizedSubcommand);
+    assert_eq!(m.unwrap_err().kind(), ErrorKind::InvalidSubcommand);
 
     let m = cmd.try_get_matches_from_mut(&["hostname", "hostname"]);
     assert!(m.is_err());
@@ -572,6 +499,7 @@ fn hostname_like_multicall() {
 }
 
 #[test]
+#[cfg(feature = "error-context")]
 fn bad_multicall_command_error() {
     let cmd = Command::new("repl")
         .version("1.0.0")
@@ -581,14 +509,13 @@ fn bad_multicall_command_error() {
         .subcommand(Command::new("bar"));
 
     let err = cmd.clone().try_get_matches_from(&["world"]).unwrap_err();
-    assert_eq!(err.kind(), ErrorKind::UnrecognizedSubcommand);
+    assert_eq!(err.kind(), ErrorKind::InvalidSubcommand);
     static HELLO_EXPECTED: &str = "\
 error: The subcommand 'world' wasn't recognized
 
-USAGE:
-    <SUBCOMMAND>
+Usage: <COMMAND>
 
-For more information try help
+For more information try 'help'
 ";
     utils::assert_eq(HELLO_EXPECTED, err.to_string());
 
@@ -599,14 +526,13 @@ For more information try help
         static BAZ_EXPECTED: &str = "\
 error: The subcommand 'baz' wasn't recognized
 
-\tDid you mean 'bar'?
+  Did you mean 'bar'?
 
 If you believe you received this message in error, try re-running with ' -- baz'
 
-USAGE:
-    <SUBCOMMAND>
+Usage: <COMMAND>
 
-For more information try help
+For more information try 'help'
 ";
         utils::assert_eq(BAZ_EXPECTED, err.to_string());
     }
@@ -642,17 +568,14 @@ fn cant_have_args_with_multicall() {
 #[test]
 fn multicall_help_flag() {
     static EXPECTED: &str = "\
-foo-bar 1.0.0
+Usage: foo bar [value]
 
-USAGE:
-    foo bar [value]
+Arguments:
+  [value]  
 
-ARGS:
-    <value>    
-
-OPTIONS:
-    -h, --help       Print help information
-    -V, --version    Print version information
+Options:
+  -h, --help     Print help information
+  -V, --version  Print version information
 ";
     let cmd = Command::new("repl")
         .version("1.0.0")
@@ -665,17 +588,14 @@ OPTIONS:
 #[test]
 fn multicall_help_subcommand() {
     static EXPECTED: &str = "\
-foo-bar 1.0.0
+Usage: foo bar [value]
 
-USAGE:
-    foo bar [value]
+Arguments:
+  [value]  
 
-ARGS:
-    <value>    
-
-OPTIONS:
-    -h, --help       Print help information
-    -V, --version    Print version information
+Options:
+  -h, --help     Print help information
+  -V, --version  Print version information
 ";
     let cmd = Command::new("repl")
         .version("1.0.0")
@@ -688,17 +608,14 @@ OPTIONS:
 #[test]
 fn multicall_render_help() {
     static EXPECTED: &str = "\
-foo-bar 1.0.0
+Usage: foo bar [value]
 
-USAGE:
-    foo bar [value]
+Arguments:
+  [value]  
 
-ARGS:
-    <value>    
-
-OPTIONS:
-    -h, --help       Print help information
-    -V, --version    Print version information
+Options:
+  -h, --help     Print help information
+  -V, --version  Print version information
 ";
     let mut cmd = Command::new("repl")
         .version("1.0.0")
@@ -709,7 +626,24 @@ OPTIONS:
     let subcmd = cmd.find_subcommand_mut("foo").unwrap();
     let subcmd = subcmd.find_subcommand_mut("bar").unwrap();
 
-    let mut buf = Vec::new();
-    subcmd.write_help(&mut buf).unwrap();
-    utils::assert_eq(EXPECTED, String::from_utf8(buf).unwrap());
+    let help = subcmd.render_help().to_string();
+    utils::assert_eq(EXPECTED, help);
+}
+
+#[test]
+#[should_panic = "Command test: command name `repeat` is duplicated"]
+fn duplicate_subcommand() {
+    Command::new("test")
+        .subcommand(Command::new("repeat"))
+        .subcommand(Command::new("repeat"))
+        .build()
+}
+
+#[test]
+#[should_panic = "Command test: command `unique` alias `repeat` is duplicated"]
+fn duplicate_subcommand_alias() {
+    Command::new("test")
+        .subcommand(Command::new("repeat"))
+        .subcommand(Command::new("unique").alias("repeat"))
+        .build()
 }

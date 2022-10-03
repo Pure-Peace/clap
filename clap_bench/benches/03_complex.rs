@@ -10,36 +10,34 @@ macro_rules! create_app {
             .version("0.1")
             .about("tests clap library")
             .author("Kevin K. <kbknapp@gmail.com>")
-            .arg(arg!(-o --option <opt> ... "tests options").required(false))
+            .arg(arg!(-o --option <opt> ... "tests options"))
             .arg(arg!([positional] "tests positionals"))
             .arg(arg!(-f --flag ... "tests flags").global(true))
-            .args(&[
+            .args([
                 arg!(flag2: -F "tests flags with exclusions")
                     .conflicts_with("flag")
                     .requires("option2"),
                 arg!(option2: --"long-option-2" <option2> "tests long options with exclusions")
-                    .required(false)
                     .conflicts_with("option")
                     .requires("positional2"),
                 arg!([positional2] "tests positionals with exclusions"),
                 arg!(-O --Option <option3> "tests options with specific value sets")
-                .required(false)
                     .value_parser(OPT3_VALS),
                 arg!([positional3] ... "tests positionals with specific values")
                     .value_parser(POS3_VALS),
-                arg!(--multvals "Tests multiple values not mult occs").required(false).value_names(&["one", "two"]),
+                arg!(--multvals <s> "Tests multiple values not mult occs").value_names(["one", "two"]),
                 arg!(
-                    --multvalsmo "Tests multiple values, not mult occs"
-                ).multiple_values(true).required(false).value_names(&["one", "two"]),
-                arg!(--minvals2 <minvals> ... "Tests 2 min vals").min_values(2).multiple_values(true).required(false),
-                arg!(--maxvals3 <maxvals> ... "Tests 3 max vals").max_values(3).multiple_values(true).required(false),
+                    --multvalsmo <s> "Tests multiple values, not mult occs"
+                ).required(false).value_names(["one", "two"]),
+                arg!(--minvals2 <minvals> ... "Tests 2 min vals").num_args(2..),
+                arg!(--maxvals3 <maxvals> ... "Tests 3 max vals").num_args(1..=3),
             ])
             .subcommand(
                 Command::new("subcmd")
                     .about("tests subcommands")
                     .version("0.1")
                     .author("Kevin K. <kbknapp@gmail.com>")
-                    .arg(arg!(-o --option <scoption> ... "tests options").required(false))
+                    .arg(arg!(-o --option <scoption> ... "tests options"))
                     .arg(arg!([scpositional] "tests positionals"))
             )
     }};
@@ -57,8 +55,7 @@ pub fn build_from_builder(c: &mut Criterion) {
                         .help("tests options")
                         .short('o')
                         .long("option")
-                        .takes_value(true)
-                        .multiple_values(true)
+                        .num_args(1..)
                         .action(ArgAction::Append),
                 )
                 .arg(Arg::new("positional").help("tests positionals").index(1))
@@ -68,12 +65,13 @@ pub fn build_from_builder(c: &mut Criterion) {
                         .help("tests flags")
                         .long("flag")
                         .global(true)
-                        .action(ArgAction::Append),
+                        .action(ArgAction::Count),
                 )
                 .arg(
                     Arg::new("flag2")
                         .short('F')
                         .help("tests flags with exclusions")
+                        .action(ArgAction::SetTrue)
                         .conflicts_with("flag")
                         .requires("option2"),
                 )
@@ -82,7 +80,7 @@ pub fn build_from_builder(c: &mut Criterion) {
                         .help("tests long options with exclusions")
                         .conflicts_with("option")
                         .requires("positional2")
-                        .takes_value(true)
+                        .action(ArgAction::Set)
                         .long("long-option-2"),
                 )
                 .arg(
@@ -94,14 +92,13 @@ pub fn build_from_builder(c: &mut Criterion) {
                     Arg::new("option3")
                         .short('O')
                         .long("Option")
-                        .takes_value(true)
+                        .action(ArgAction::Set)
                         .help("tests options with specific value sets")
                         .value_parser(OPT3_VALS),
                 )
                 .arg(
                     Arg::new("positional3")
-                        .takes_value(true)
-                        .multiple_values(true)
+                        .num_args(1..)
                         .help("tests positionals with specific values")
                         .index(4)
                         .value_parser(POS3_VALS),
@@ -110,34 +107,28 @@ pub fn build_from_builder(c: &mut Criterion) {
                     Arg::new("multvals")
                         .long("multvals")
                         .help("Tests multiple values, not mult occs")
-                        .value_names(&["one", "two"]),
+                        .value_names(["one", "two"]),
                 )
                 .arg(
                     Arg::new("multvalsmo")
                         .long("multvalsmo")
-                        .takes_value(true)
-                        .multiple_values(true)
                         .action(ArgAction::Append)
                         .help("Tests multiple values, not mult occs")
-                        .value_names(&["one", "two"]),
+                        .value_names(["one", "two"]),
                 )
                 .arg(
                     Arg::new("minvals")
                         .long("minvals2")
-                        .takes_value(true)
-                        .multiple_values(true)
                         .action(ArgAction::Append)
                         .help("Tests 2 min vals")
-                        .min_values(2),
+                        .num_args(2..),
                 )
                 .arg(
                     Arg::new("maxvals")
                         .long("maxvals3")
-                        .takes_value(true)
-                        .multiple_values(true)
                         .action(ArgAction::Append)
                         .help("Tests 3 max vals")
-                        .max_values(3),
+                        .num_args(1..=3),
                 )
                 .subcommand(
                     Command::new("subcmd")
@@ -148,8 +139,7 @@ pub fn build_from_builder(c: &mut Criterion) {
                             Arg::new("scoption")
                                 .short('o')
                                 .long("option")
-                                .takes_value(true)
-                                .multiple_values(true)
+                                .num_args(1..)
                                 .action(ArgAction::Append)
                                 .help("tests options"),
                         )

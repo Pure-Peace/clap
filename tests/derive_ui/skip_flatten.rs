@@ -9,26 +9,23 @@
 use clap::Parser;
 
 #[derive(Parser, Debug)]
-#[clap(name = "make-cookie")]
+#[command(name = "make-cookie")]
 struct MakeCookie {
-    #[clap(short, value_parser)]
+    #[arg(short)]
     s: String,
 
-    #[clap(skip, flatten)]
+    #[command(skip, flatten)]
     cmd: Command,
 }
 
 #[derive(Parser, Debug)]
 enum Command {
-    #[clap(name = "pound")]
+    #[command(name = "pound")]
     /// Pound acorns into flour for cookie dough.
-    Pound {
-        #[clap(value_parser)]
-        acorns: u32,
-    },
+    Pound { acorns: u32 },
 
     Sparkle {
-        #[clap(short, value_parser)]
+        #[arg(short)]
         color: String,
     },
 }

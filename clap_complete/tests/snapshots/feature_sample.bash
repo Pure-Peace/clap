@@ -8,15 +8,21 @@ _my-app() {
 
     for i in ${COMP_WORDS[@]}
     do
-        case "${i}" in
-            "$1")
+        case "${cmd},${i}" in
+            ",$1")
                 cmd="my__app"
                 ;;
-            help)
-                cmd+="__help"
+            my__app,help)
+                cmd="my__app__help"
                 ;;
-            test)
-                cmd+="__test"
+            my__app,test)
+                cmd="my__app__test"
+                ;;
+            my__app__help,help)
+                cmd="my__app__help__help"
+                ;;
+            my__app__help,test)
+                cmd="my__app__help__test"
                 ;;
             *)
                 ;;
@@ -25,7 +31,7 @@ _my-app() {
 
     case "${cmd}" in
         my__app)
-            opts="-h -V -C -c --help --version --conf --config <file> first second test help"
+            opts="-C -c -h -V --conf --config --help --version [file] first second test help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -39,8 +45,36 @@ _my-app() {
             return 0
             ;;
         my__app__help)
-            opts="<SUBCOMMAND>..."
+            opts="test help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        my__app__help__help)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        my__app__help__test)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi

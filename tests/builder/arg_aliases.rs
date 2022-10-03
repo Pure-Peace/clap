@@ -2,39 +2,13 @@ use super::utils;
 
 use clap::{arg, Arg, ArgAction, Command};
 
-static SC_VISIBLE_ALIAS_HELP: &str = "ct-test 1.2
-Some help
-
-USAGE:
-    ct test [OPTIONS]
-
-OPTIONS:
-    -f, --flag         [aliases: v_flg, flag2, flg3]
-    -h, --help         Print help information
-    -o, --opt <opt>    [aliases: visible]
-    -V, --version      Print version information
-";
-
-static SC_INVISIBLE_ALIAS_HELP: &str = "ct-test 1.2
-Some help
-
-USAGE:
-    ct test [OPTIONS]
-
-OPTIONS:
-    -f, --flag         
-    -h, --help         Print help information
-    -o, --opt <opt>    
-    -V, --version      Print version information
-";
-
 #[test]
 fn single_alias_of_option() {
     let a = Command::new("single_alias")
         .arg(
             Arg::new("alias")
                 .long("alias")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .help("single alias")
                 .alias("new-opt"),
         )
@@ -53,9 +27,9 @@ fn multiple_aliases_of_option() {
     let a = Command::new("multiple_aliases").arg(
         Arg::new("aliases")
             .long("aliases")
-            .takes_value(true)
+            .action(ArgAction::Set)
             .help("multiple aliases")
-            .aliases(&["alias1", "alias2", "alias3"]),
+            .aliases(["alias1", "alias2", "alias3"]),
     );
     let long = a
         .clone()
@@ -112,6 +86,37 @@ fn multiple_aliases_of_option() {
 }
 
 #[test]
+fn get_aliases() {
+    let a = Arg::new("aliases")
+        .long("aliases")
+        .action(ArgAction::Set)
+        .help("multiple aliases")
+        .aliases(["alias1", "alias2", "alias3"])
+        .short_aliases(['a', 'b', 'c'])
+        .visible_aliases(["alias4", "alias5", "alias6"])
+        .visible_short_aliases(['d', 'e', 'f']);
+
+    assert!(a.get_short_and_visible_aliases().is_none());
+    assert_eq!(
+        a.get_long_and_visible_aliases().unwrap(),
+        &["aliases", "alias4", "alias5", "alias6"]
+    );
+    assert_eq!(
+        a.get_visible_aliases().unwrap(),
+        &["alias4", "alias5", "alias6"]
+    );
+    assert_eq!(
+        a.get_all_aliases().unwrap(),
+        &["alias1", "alias2", "alias3", "alias4", "alias5", "alias6"]
+    );
+    assert_eq!(a.get_visible_short_aliases().unwrap(), vec!['d', 'e', 'f']);
+    assert_eq!(
+        a.get_all_short_aliases().unwrap(),
+        vec!['a', 'b', 'c', 'd', 'e', 'f']
+    );
+}
+
+#[test]
 fn single_alias_of_flag() {
     let a = Command::new("test")
         .arg(
@@ -131,7 +136,7 @@ fn multiple_aliases_of_flag() {
     let a = Command::new("test").arg(
         Arg::new("flag")
             .long("flag")
-            .aliases(&["invisible", "set", "of", "cool", "aliases"])
+            .aliases(["invisible", "set", "of", "cool", "aliases"])
             .action(ArgAction::SetTrue),
     );
 
@@ -165,12 +170,12 @@ fn alias_on_a_subcommand_option() {
                 Arg::new("test")
                     .short('t')
                     .long("test")
-                    .takes_value(true)
+                    .action(ArgAction::Set)
                     .alias("opt")
                     .help("testing testing"),
             ),
         )
-        .arg(Arg::new("other").long("other").aliases(&["o1", "o2", "o3"]))
+        .arg(Arg::new("other").long("other").aliases(["o1", "o2", "o3"]))
         .try_get_matches_from(vec!["test", "some", "--opt", "awesome"])
         .unwrap();
 
@@ -185,6 +190,18 @@ fn alias_on_a_subcommand_option() {
 
 #[test]
 fn invisible_arg_aliases_help_output() {
+    static SC_INVISIBLE_ALIAS_HELP: &str = "\
+Some help
+
+Usage: ct test [OPTIONS]
+
+Options:
+  -o, --opt <opt>  
+  -f, --flag       
+  -h, --help       Print help information
+  -V, --version    Print version information
+";
+
     let cmd = Command::new("ct").author("Salim Afiune").subcommand(
         Command::new("test")
             .about("Some help")
@@ -193,16 +210,28 @@ fn invisible_arg_aliases_help_output() {
                 Arg::new("opt")
                     .long("opt")
                     .short('o')
-                    .takes_value(true)
-                    .aliases(&["invisible", "als1", "more"]),
+                    .action(ArgAction::Set)
+                    .aliases(["invisible", "als1", "more"]),
             )
-            .arg(arg!(-f - -flag).aliases(&["unseeable", "flg1", "anyway"])),
+            .arg(arg!(-f - -flag).aliases(["unseeable", "flg1", "anyway"])),
     );
     utils::assert_output(cmd, "ct test --help", SC_INVISIBLE_ALIAS_HELP, false);
 }
 
 #[test]
 fn visible_arg_aliases_help_output() {
+    static SC_VISIBLE_ALIAS_HELP: &str = "\
+Some help
+
+Usage: ct test [OPTIONS]
+
+Options:
+  -o, --opt <opt>  [aliases: visible]
+  -f, --flag       [aliases: v_flg, flag2, flg3]
+  -h, --help       Print help information
+  -V, --version    Print version information
+";
+
     let cmd = Command::new("ct").author("Salim Afiune").subcommand(
         Command::new("test")
             .about("Some help")
@@ -211,7 +240,7 @@ fn visible_arg_aliases_help_output() {
                 Arg::new("opt")
                     .long("opt")
                     .short('o')
-                    .takes_value(true)
+                    .action(ArgAction::Set)
                     .alias("invisible")
                     .visible_alias("visible"),
             )
@@ -219,7 +248,8 @@ fn visible_arg_aliases_help_output() {
                 Arg::new("flg")
                     .long("flag")
                     .short('f')
-                    .visible_aliases(&["v_flg", "flag2", "flg3"]),
+                    .action(ArgAction::SetTrue)
+                    .visible_aliases(["v_flg", "flag2", "flg3"]),
             ),
     );
     utils::assert_output(cmd, "ct test --help", SC_VISIBLE_ALIAS_HELP, false);

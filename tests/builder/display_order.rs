@@ -9,17 +9,15 @@ fn very_large_display_order() {
     utils::assert_output(
         cmd,
         "test --help",
-        "test 
+        "\
+Usage: test [COMMAND]
 
-USAGE:
-    test [SUBCOMMAND]
+Commands:
+  help  Print this message or the help of the given subcommand(s)
+  sub   
 
-OPTIONS:
-    -h, --help    Print help information
-
-SUBCOMMANDS:
-    help    Print this message or the help of the given subcommand(s)
-    sub     
+Options:
+  -h, --help  Print help information
 ",
         false,
     );

@@ -1,13 +1,13 @@
 use clap::{Arg, ArgAction, ArgMatches, Command};
 
-fn get_app() -> Command<'static> {
+fn get_app() -> Command {
     Command::new("myprog")
         .arg(
             Arg::new("GLOBAL_ARG")
                 .long("global-arg")
                 .help("Specifies something needed by the subcommands")
                 .global(true)
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .default_value("default_value"),
         )
         .arg(
@@ -20,7 +20,7 @@ fn get_app() -> Command<'static> {
         .subcommand(Command::new("outer").subcommand(Command::new("inner")))
 }
 
-fn get_matches(cmd: Command<'static>, argv: &'static str) -> ArgMatches {
+fn get_matches(cmd: Command, argv: &'static str) -> ArgMatches {
     cmd.try_get_matches_from(argv.split(' ').collect::<Vec<_>>())
         .unwrap()
 }

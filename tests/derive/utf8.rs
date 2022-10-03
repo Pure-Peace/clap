@@ -1,18 +1,18 @@
 #![cfg(not(windows))]
 
-use clap::{ErrorKind, Parser};
+use clap::error::ErrorKind;
+use clap::Parser;
 use std::ffi::OsString;
 use std::os::unix::ffi::OsStringExt;
 
 #[derive(Parser, Debug, PartialEq, Eq)]
 struct Positional {
-    #[clap(value_parser)]
     arg: String,
 }
 
 #[derive(Parser, Debug, PartialEq, Eq)]
 struct Named {
-    #[clap(short, long, value_parser)]
+    #[arg(short, long)]
     arg: String,
 }
 
@@ -77,13 +77,12 @@ fn invalid_utf8_strict_option_long_equals() {
 
 #[derive(Parser, Debug, PartialEq, Eq)]
 struct PositionalOs {
-    #[clap(value_parser)]
     arg: OsString,
 }
 
 #[derive(Parser, Debug, PartialEq, Eq)]
 struct NamedOs {
-    #[clap(short, long, value_parser)]
+    #[arg(short, long)]
     arg: OsString,
 }
 
@@ -172,7 +171,7 @@ fn invalid_utf8_option_long_equals() {
 
 #[derive(Debug, PartialEq, Parser)]
 enum External {
-    #[clap(external_subcommand)]
+    #[command(external_subcommand)]
     Other(Vec<String>),
 }
 
@@ -202,7 +201,7 @@ fn refuse_invalid_utf8_subcommand_args_with_allow_external_subcommands() {
 
 #[derive(Debug, PartialEq, Parser)]
 enum ExternalOs {
-    #[clap(external_subcommand)]
+    #[command(external_subcommand)]
     Other(Vec<OsString>),
 }
 

@@ -19,10 +19,7 @@ pub fn all_subcommands(cmd: &Command) -> Vec<(String, String)> {
 /// Finds the subcommand [`clap::Command`] from the given [`clap::Command`] with the given path.
 ///
 /// **NOTE:** `path` should not contain the root `bin_name`.
-pub fn find_subcommand_with_path<'help, 'cmd>(
-    p: &'cmd Command<'help>,
-    path: Vec<&str>,
-) -> &'cmd Command<'help> {
+pub fn find_subcommand_with_path<'cmd>(p: &'cmd Command, path: Vec<&str>) -> &'cmd Command {
     let mut cmd = p;
 
     for sc in path {
@@ -42,10 +39,6 @@ pub fn subcommands(p: &Command) -> Vec<(String, String)> {
 
     let mut subcmds = vec![];
 
-    if !p.has_subcommands() {
-        return subcmds;
-    }
-
     for sc in p.get_subcommands() {
         let sc_bin_name = sc.get_bin_name().unwrap();
 
@@ -62,7 +55,7 @@ pub fn subcommands(p: &Command) -> Vec<(String, String)> {
 }
 
 /// Gets all the short options, their visible aliases and flags of a [`clap::Command`].
-/// Includes `h` and `V` depending on the [`clap::AppSettings`].
+/// Includes `h` and `V` depending on the [`clap::Command`] settings.
 pub fn shorts_and_visible_aliases(p: &Command) -> Vec<char> {
     debug!("shorts: name={}", p.get_name());
 
@@ -87,7 +80,7 @@ pub fn shorts_and_visible_aliases(p: &Command) -> Vec<char> {
 }
 
 /// Gets all the long options, their visible aliases and flags of a [`clap::Command`].
-/// Includes `help` and `version` depending on the [`clap::AppSettings`].
+/// Includes `help` and `version` depending on the [`clap::Command`] settings.
 pub fn longs_and_visible_aliases(p: &Command) -> Vec<String> {
     debug!("longs: name={}", p.get_name());
 
@@ -117,24 +110,19 @@ pub fn longs_and_visible_aliases(p: &Command) -> Vec<String> {
 }
 
 /// Gets all the flags of a [`clap::Command`](Command).
-/// Includes `help` and `version` depending on the [`clap::AppSettings`].
-pub fn flags<'help>(p: &Command<'help>) -> Vec<Arg<'help>> {
+/// Includes `help` and `version` depending on the [`clap::Command`] settings.
+pub fn flags(p: &Command) -> Vec<Arg> {
     debug!("flags: name={}", p.get_name());
     p.get_arguments()
-        .filter(|a| !a.is_takes_value_set() && !a.is_positional())
+        .filter(|a| !a.get_num_args().expect("built").takes_values() && !a.is_positional())
         .cloned()
         .collect()
 }
 
 /// Get the possible values for completion
-pub fn possible_values<'help>(a: &Arg<'help>) -> Option<Vec<clap::PossibleValue<'help>>> {
-    #![allow(deprecated)]
-    if !a.is_takes_value_set() {
+pub fn possible_values(a: &Arg) -> Option<Vec<clap::builder::PossibleValue>> {
+    if !a.get_num_args().expect("built").takes_values() {
         None
-    } else if let Some(pvs) = a.get_possible_values() {
-        // Check old first in case the user explicitly set possible values and the derive inferred
-        // a `ValueParser` with some.
-        Some(pvs.to_vec())
     } else {
         a.get_value_parser()
             .possible_values()
@@ -146,9 +134,9 @@ pub fn possible_values<'help>(a: &Arg<'help>) -> Option<Vec<clap::PossibleValue<
 mod tests {
     use super::*;
     use clap::Arg;
-    use pretty_assertions::assert_eq;
+    use clap::ArgAction;
 
-    fn common_app() -> Command<'static> {
+    fn common_app() -> Command {
         Command::new("myapp")
             .subcommand(
                 Command::new("test").subcommand(Command::new("config")).arg(
@@ -157,6 +145,7 @@ mod tests {
                         .short_alias('c')
                         .visible_short_alias('p')
                         .long("file")
+                        .action(ArgAction::SetTrue)
                         .visible_alias("path"),
                 ),
             )
@@ -164,14 +153,14 @@ mod tests {
             .bin_name("my-cmd")
     }
 
-    fn built() -> Command<'static> {
+    fn built() -> Command {
         let mut cmd = common_app();
 
         cmd.build();
         cmd
     }
 
-    fn built_with_version() -> Command<'static> {
+    fn built_with_version() -> Command {
         let mut cmd = common_app().version("3.0");
 
         cmd.build();
@@ -204,6 +193,12 @@ mod tests {
                 ("help".to_string(), "my-cmd help".to_string()),
                 ("config".to_string(), "my-cmd test config".to_string()),
                 ("help".to_string(), "my-cmd test help".to_string()),
+                ("config".to_string(), "my-cmd test help config".to_string()),
+                ("help".to_string(), "my-cmd test help help".to_string()),
+                ("test".to_string(), "my-cmd help test".to_string()),
+                ("hello".to_string(), "my-cmd help hello".to_string()),
+                ("help".to_string(), "my-cmd help help".to_string()),
+                ("config".to_string(), "my-cmd help test config".to_string()),
             ]
         );
     }

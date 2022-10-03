@@ -8,8 +8,8 @@ fn grouped_value_works() {
         .arg(
             Arg::new("option")
                 .long("option")
-                .takes_value(true)
-                .multiple_values(true)
+                .action(ArgAction::Set)
+                .num_args(1..)
                 .action(ArgAction::Append),
         )
         .try_get_matches_from(&[
@@ -35,13 +35,13 @@ fn grouped_value_works() {
 #[test]
 fn issue_1026() {
     let m = Command::new("cli")
-        .arg(Arg::new("server").short('s').takes_value(true))
-        .arg(Arg::new("user").short('u').takes_value(true))
+        .arg(Arg::new("server").short('s').action(ArgAction::Set))
+        .arg(Arg::new("user").short('u').action(ArgAction::Set))
         .arg(
             Arg::new("target")
                 .long("target")
-                .takes_value(true)
-                .multiple_values(true)
+                .action(ArgAction::Set)
+                .num_args(1..)
                 .action(ArgAction::Append),
         )
         .try_get_matches_from(&[
@@ -67,9 +67,9 @@ fn grouped_value_long_flag_delimiter() {
         .arg(
             Arg::new("option")
                 .long("option")
-                .takes_value(true)
-                .use_value_delimiter(true)
-                .multiple_values(true)
+                .action(ArgAction::Set)
+                .value_delimiter(',')
+                .num_args(1..)
                 .action(ArgAction::Append),
         )
         .try_get_matches_from(vec![
@@ -97,9 +97,9 @@ fn grouped_value_short_flag_delimiter() {
         .arg(
             Arg::new("option")
                 .short('o')
-                .takes_value(true)
-                .use_value_delimiter(true)
-                .multiple_values(true)
+                .action(ArgAction::Set)
+                .value_delimiter(',')
+                .num_args(1..)
                 .action(ArgAction::Append),
         )
         .try_get_matches_from(vec!["myapp", "-o=foo", "-o=val1,val2,val3", "-o=bar"])
@@ -117,8 +117,8 @@ fn grouped_value_positional_arg() {
         .arg(
             Arg::new("pos")
                 .help("multiple positionals")
-                .takes_value(true)
-                .multiple_values(true),
+                .action(ArgAction::Set)
+                .num_args(1..),
         )
         .try_get_matches_from(vec![
             "myprog", "val1", "val2", "val3", "val4", "val5", "val6",
@@ -138,8 +138,8 @@ fn grouped_value_multiple_positional_arg() {
         .arg(
             Arg::new("pos2")
                 .help("multiple positionals")
-                .takes_value(true)
-                .multiple_values(true),
+                .action(ArgAction::Set)
+                .num_args(1..),
         )
         .try_get_matches_from(vec![
             "myprog", "val1", "val2", "val3", "val4", "val5", "val6",
@@ -159,8 +159,8 @@ fn grouped_value_multiple_positional_arg_last_multiple() {
         .arg(
             Arg::new("pos2")
                 .help("multiple positionals")
-                .takes_value(true)
-                .multiple_values(true)
+                .action(ArgAction::Set)
+                .num_args(1..)
                 .last(true),
         )
         .try_get_matches_from(vec![
@@ -177,12 +177,12 @@ fn grouped_value_multiple_positional_arg_last_multiple() {
 #[test]
 fn grouped_interleaved_positional_values() {
     let cmd = clap::Command::new("foo")
-        .arg(clap::Arg::new("pos").multiple_values(true))
+        .arg(clap::Arg::new("pos").num_args(1..))
         .arg(
             clap::Arg::new("flag")
                 .short('f')
                 .long("flag")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .action(ArgAction::Append),
         );
 
@@ -191,7 +191,7 @@ fn grouped_interleaved_positional_values() {
         .unwrap();
 
     let pos: Vec<_> = m.grouped_values_of("pos").unwrap().collect();
-    assert_eq!(pos, vec![vec!["1", "2", "3", "4"]]);
+    assert_eq!(pos, vec![vec!["1", "2"], vec!["3"], vec!["4"]]);
 
     let flag: Vec<_> = m.grouped_values_of("flag").unwrap().collect();
     assert_eq!(flag, vec![vec!["a"], vec!["b"]]);
@@ -200,12 +200,12 @@ fn grouped_interleaved_positional_values() {
 #[test]
 fn grouped_interleaved_positional_occurrences() {
     let cmd = clap::Command::new("foo")
-        .arg(clap::Arg::new("pos").multiple_values(true))
+        .arg(clap::Arg::new("pos").num_args(1..))
         .arg(
             clap::Arg::new("flag")
                 .short('f')
                 .long("flag")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .action(ArgAction::Append),
         );
 
@@ -214,68 +214,16 @@ fn grouped_interleaved_positional_occurrences() {
         .unwrap();
 
     let pos: Vec<_> = m.grouped_values_of("pos").unwrap().collect();
-    assert_eq!(pos, vec![vec!["1", "2", "3", "4"]]);
+    assert_eq!(pos, vec![vec!["1", "2"], vec!["3"], vec!["4"]]);
 
     let flag: Vec<_> = m.grouped_values_of("flag").unwrap().collect();
     assert_eq!(flag, vec![vec!["a"], vec!["b"]]);
 }
 
 #[test]
-fn issue_1374() {
-    let cmd = Command::new("MyApp").arg(
-        Arg::new("input")
-            .takes_value(true)
-            .long("input")
-            .overrides_with("input")
-            .min_values(0)
-            .action(ArgAction::Append),
-    );
-    let matches = cmd
-        .clone()
-        .try_get_matches_from(&["MyApp", "--input", "a", "b", "c", "--input", "d"])
-        .unwrap();
-    let vs = matches
-        .get_many::<String>("input")
-        .unwrap()
-        .map(|v| v.as_str());
-    assert_eq!(vs.collect::<Vec<_>>(), vec!["a", "b", "c", "d"]);
-    let matches = cmd
-        .clone()
-        .try_get_matches_from(&["MyApp", "--input", "a", "b", "--input", "c", "d"])
-        .unwrap();
-    let vs = matches
-        .get_many::<String>("input")
-        .unwrap()
-        .map(|v| v.as_str());
-    assert_eq!(vs.collect::<Vec<_>>(), vec!["a", "b", "c", "d"]);
-}
-
-#[test]
-fn issue_2171_deprecated() {
-    #![allow(deprecated)]
-    let schema = Command::new("ripgrep#1701 reproducer")
-        .args_override_self(true)
-        .arg(Arg::new("pretty").short('p').long("pretty"))
-        .arg(Arg::new("search_zip").short('z').long("search-zip"));
-
-    let test_args = &[
-        vec!["reproducer", "-pz", "-p"],
-        vec!["reproducer", "-pzp"],
-        vec!["reproducer", "-zpp"],
-        vec!["reproducer", "-pp", "-z"],
-        vec!["reproducer", "-p", "-p", "-z"],
-        vec!["reproducer", "-p", "-pz"],
-        vec!["reproducer", "-ppz"],
-    ];
-
-    for argv in test_args {
-        let _ = schema.clone().try_get_matches_from(argv).unwrap();
-    }
-}
-
-#[test]
 fn issue_2171() {
     let schema = Command::new("ripgrep#1701 reproducer")
+        .args_override_self(true)
         .arg(
             Arg::new("pretty")
                 .short('p')

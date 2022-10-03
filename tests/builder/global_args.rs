@@ -8,7 +8,7 @@ fn issue_1076() {
                 .long("global-arg")
                 .help("Specifies something needed by the subcommands")
                 .global(true)
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .default_value("default_value"),
         )
         .arg(
@@ -16,7 +16,7 @@ fn issue_1076() {
                 .long("global-flag")
                 .help("Specifies something needed by the subcommands")
                 .global(true)
-                .takes_value(true),
+                .action(ArgAction::Set),
         )
         .subcommand(Command::new("outer").subcommand(Command::new("inner")));
     let _ = cmd.try_get_matches_from_mut(vec!["myprog"]);
@@ -29,7 +29,12 @@ fn propagate_global_arg_in_subcommand_to_subsubcommand_1385() {
     let m1 = Command::new("foo")
         .subcommand(
             Command::new("sub1")
-                .arg(Arg::new("arg1").long("arg1").takes_value(true).global(true))
+                .arg(
+                    Arg::new("arg1")
+                        .long("arg1")
+                        .action(ArgAction::Set)
+                        .global(true),
+                )
                 .subcommand(Command::new("sub1a")),
         )
         .try_get_matches_from(&["foo", "sub1", "--arg1", "v1", "sub1a"])
@@ -50,11 +55,11 @@ fn propagate_global_arg_in_subcommand_to_subsubcommand_1385() {
 fn propagate_global_arg_to_subcommand_in_subsubcommand_2053() {
     let m = Command::new("opts")
         .arg(arg!(--"global-flag").global(true))
-        .arg(arg!(--"global-str" <str>).required(false).global(true))
+        .arg(arg!(--"global-str" <str>).global(true))
         .subcommand(
             Command::new("test")
                 .arg(arg!(--"sub-flag").global(true))
-                .arg(arg!(--"sub-str" <str>).required(false).global(true))
+                .arg(arg!(--"sub-str" <str>).global(true))
                 .subcommand(Command::new("test")),
         )
         .try_get_matches_from(&[
@@ -125,4 +130,78 @@ fn deeply_nested_discovery() {
     assert!(*m.get_one::<bool>("long-b").expect("defaulted by clap"));
     let m = m.subcommand_matches("c").unwrap();
     assert!(*m.get_one::<bool>("long-c").expect("defaulted by clap"));
+}
+
+#[test]
+fn global_overrides_default() {
+    let cmd = Command::new("test")
+        .arg(
+            Arg::new("name")
+                .long("name")
+                .global(true)
+                .action(ArgAction::Set)
+                .default_value("from_default"),
+        )
+        .subcommand(Command::new("sub"));
+
+    let m = cmd.clone().try_get_matches_from(["test"]).unwrap();
+    assert_eq!(
+        m.get_one::<String>("name").unwrap().as_str(),
+        "from_default"
+    );
+
+    let m = cmd
+        .clone()
+        .try_get_matches_from(["test", "--name", "from_arg"])
+        .unwrap();
+    assert_eq!(m.get_one::<String>("name").unwrap().as_str(), "from_arg");
+
+    let m = cmd
+        .clone()
+        .try_get_matches_from(["test", "--name", "from_arg", "sub"])
+        .unwrap();
+    assert_eq!(m.get_one::<String>("name").unwrap().as_str(), "from_arg");
+
+    let m = cmd
+        .clone()
+        .try_get_matches_from(["test", "sub", "--name", "from_arg"])
+        .unwrap();
+    assert_eq!(m.get_one::<String>("name").unwrap().as_str(), "from_arg");
+}
+
+#[test]
+#[cfg(feature = "env")]
+fn global_overrides_env() {
+    std::env::set_var("GLOBAL_OVERRIDES_ENV", "from_env");
+
+    let cmd = Command::new("test")
+        .arg(
+            Arg::new("name")
+                .long("name")
+                .global(true)
+                .action(ArgAction::Set)
+                .env("GLOBAL_OVERRIDES_ENV"),
+        )
+        .subcommand(Command::new("sub"));
+
+    let m = cmd.clone().try_get_matches_from(["test"]).unwrap();
+    assert_eq!(m.get_one::<String>("name").unwrap().as_str(), "from_env");
+
+    let m = cmd
+        .clone()
+        .try_get_matches_from(["test", "--name", "from_arg"])
+        .unwrap();
+    assert_eq!(m.get_one::<String>("name").unwrap().as_str(), "from_arg");
+
+    let m = cmd
+        .clone()
+        .try_get_matches_from(["test", "--name", "from_arg", "sub"])
+        .unwrap();
+    assert_eq!(m.get_one::<String>("name").unwrap().as_str(), "from_arg");
+
+    let m = cmd
+        .clone()
+        .try_get_matches_from(["test", "sub", "--name", "from_arg"])
+        .unwrap();
+    assert_eq!(m.get_one::<String>("name").unwrap().as_str(), "from_arg");
 }

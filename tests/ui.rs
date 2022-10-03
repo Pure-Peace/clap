@@ -1,6 +1,9 @@
 #![cfg(not(tarpaulin))]
 
 #[test]
+#[cfg(feature = "help")]
+#[cfg(feature = "error-context")]
+#[cfg(feature = "usage")]
 fn ui_tests() {
     let t = trycmd::TestCases::new();
     let features = [
@@ -18,6 +21,8 @@ fn ui_tests() {
         "suggestions",
         #[cfg(feature = "unicode")]
         "unicode",
+        #[cfg(feature = "string")]
+        "string",
         #[cfg(feature = "wrap_help")]
         "wrap_help",
         #[cfg(feature = "unstable-replace")]

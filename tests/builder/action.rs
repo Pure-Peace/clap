@@ -1,5 +1,7 @@
 #![allow(clippy::bool_assert_comparison)]
 
+use clap::builder::ArgPredicate;
+use clap::error::ErrorKind;
 use clap::Arg;
 use clap::ArgAction;
 use clap::Command;
@@ -11,10 +13,6 @@ fn set() {
     let matches = cmd.clone().try_get_matches_from(["test"]).unwrap();
     assert_eq!(matches.get_one::<String>("mammal"), None);
     assert_eq!(matches.contains_id("mammal"), false);
-    #[allow(deprecated)]
-    {
-        assert_eq!(matches.occurrences_of("mammal"), 0);
-    }
     assert_eq!(matches.index_of("mammal"), None);
 
     let matches = cmd
@@ -23,22 +21,21 @@ fn set() {
         .unwrap();
     assert_eq!(matches.get_one::<String>("mammal").unwrap(), "dog");
     assert_eq!(matches.contains_id("mammal"), true);
-    #[allow(deprecated)]
-    {
-        assert_eq!(matches.occurrences_of("mammal"), 0);
-    }
     assert_eq!(matches.index_of("mammal"), Some(2));
+
+    let result = cmd
+        .clone()
+        .try_get_matches_from(["test", "--mammal", "dog", "--mammal", "cat"]);
+    let err = result.err().unwrap();
+    assert_eq!(err.kind(), ErrorKind::ArgumentConflict);
 
     let matches = cmd
         .clone()
+        .args_override_self(true)
         .try_get_matches_from(["test", "--mammal", "dog", "--mammal", "cat"])
         .unwrap();
     assert_eq!(matches.get_one::<String>("mammal").unwrap(), "cat");
     assert_eq!(matches.contains_id("mammal"), true);
-    #[allow(deprecated)]
-    {
-        assert_eq!(matches.occurrences_of("mammal"), 0);
-    }
     assert_eq!(matches.index_of("mammal"), Some(4));
 }
 
@@ -49,10 +46,6 @@ fn append() {
     let matches = cmd.clone().try_get_matches_from(["test"]).unwrap();
     assert_eq!(matches.get_one::<String>("mammal"), None);
     assert_eq!(matches.contains_id("mammal"), false);
-    #[allow(deprecated)]
-    {
-        assert_eq!(matches.occurrences_of("mammal"), 0);
-    }
     assert_eq!(matches.index_of("mammal"), None);
 
     let matches = cmd
@@ -61,10 +54,6 @@ fn append() {
         .unwrap();
     assert_eq!(matches.get_one::<String>("mammal").unwrap(), "dog");
     assert_eq!(matches.contains_id("mammal"), true);
-    #[allow(deprecated)]
-    {
-        assert_eq!(matches.occurrences_of("mammal"), 0);
-    }
     assert_eq!(
         matches.indices_of("mammal").unwrap().collect::<Vec<_>>(),
         vec![2]
@@ -83,10 +72,6 @@ fn append() {
         vec!["dog", "cat"]
     );
     assert_eq!(matches.contains_id("mammal"), true);
-    #[allow(deprecated)]
-    {
-        assert_eq!(matches.occurrences_of("mammal"), 0);
-    }
     assert_eq!(
         matches.indices_of("mammal").unwrap().collect::<Vec<_>>(),
         vec![2, 4]
@@ -101,10 +86,6 @@ fn set_true() {
     let matches = cmd.clone().try_get_matches_from(["test"]).unwrap();
     assert_eq!(*matches.get_one::<bool>("mammal").unwrap(), false);
     assert_eq!(matches.contains_id("mammal"), true);
-    #[allow(deprecated)]
-    {
-        assert_eq!(matches.occurrences_of("mammal"), 0);
-    }
     assert_eq!(matches.index_of("mammal"), Some(1));
 
     let matches = cmd
@@ -113,22 +94,21 @@ fn set_true() {
         .unwrap();
     assert_eq!(*matches.get_one::<bool>("mammal").unwrap(), true);
     assert_eq!(matches.contains_id("mammal"), true);
-    #[allow(deprecated)]
-    {
-        assert_eq!(matches.occurrences_of("mammal"), 0);
-    }
     assert_eq!(matches.index_of("mammal"), Some(1));
+
+    let result = cmd
+        .clone()
+        .try_get_matches_from(["test", "--mammal", "--mammal"]);
+    let err = result.err().unwrap();
+    assert_eq!(err.kind(), ErrorKind::ArgumentConflict);
 
     let matches = cmd
         .clone()
+        .args_override_self(true)
         .try_get_matches_from(["test", "--mammal", "--mammal"])
         .unwrap();
     assert_eq!(*matches.get_one::<bool>("mammal").unwrap(), true);
     assert_eq!(matches.contains_id("mammal"), true);
-    #[allow(deprecated)]
-    {
-        assert_eq!(matches.occurrences_of("mammal"), 0);
-    }
     assert_eq!(matches.index_of("mammal"), Some(2));
 }
 
@@ -147,19 +127,11 @@ fn set_true_with_explicit_default_value() {
         .unwrap();
     assert_eq!(*matches.get_one::<bool>("mammal").unwrap(), true);
     assert_eq!(matches.contains_id("mammal"), true);
-    #[allow(deprecated)]
-    {
-        assert_eq!(matches.occurrences_of("mammal"), 0);
-    }
     assert_eq!(matches.index_of("mammal"), Some(1));
 
     let matches = cmd.clone().try_get_matches_from(["test"]).unwrap();
     assert_eq!(*matches.get_one::<bool>("mammal").unwrap(), false);
     assert_eq!(matches.contains_id("mammal"), true);
-    #[allow(deprecated)]
-    {
-        assert_eq!(matches.occurrences_of("mammal"), 0);
-    }
     assert_eq!(matches.index_of("mammal"), Some(1));
 }
 
@@ -170,7 +142,7 @@ fn set_true_with_default_value_if_present() {
             Arg::new("mammal")
                 .long("mammal")
                 .action(ArgAction::SetTrue)
-                .default_value_if("dog", None, Some("true")),
+                .default_value_if("dog", ArgPredicate::IsPresent, Some("true")),
         )
         .arg(Arg::new("dog").long("dog").action(ArgAction::SetTrue));
 
@@ -197,7 +169,7 @@ fn set_true_with_default_value_if_value() {
             Arg::new("mammal")
                 .long("mammal")
                 .action(ArgAction::SetTrue)
-                .default_value_if("dog", Some("true"), Some("true")),
+                .default_value_if("dog", "true", Some("true")),
         )
         .arg(Arg::new("dog").long("dog").action(ArgAction::SetTrue));
 
@@ -258,10 +230,6 @@ fn set_false() {
     let matches = cmd.clone().try_get_matches_from(["test"]).unwrap();
     assert_eq!(*matches.get_one::<bool>("mammal").unwrap(), true);
     assert_eq!(matches.contains_id("mammal"), true);
-    #[allow(deprecated)]
-    {
-        assert_eq!(matches.occurrences_of("mammal"), 0);
-    }
     assert_eq!(matches.index_of("mammal"), Some(1));
 
     let matches = cmd
@@ -270,22 +238,21 @@ fn set_false() {
         .unwrap();
     assert_eq!(*matches.get_one::<bool>("mammal").unwrap(), false);
     assert_eq!(matches.contains_id("mammal"), true);
-    #[allow(deprecated)]
-    {
-        assert_eq!(matches.occurrences_of("mammal"), 0);
-    }
     assert_eq!(matches.index_of("mammal"), Some(1));
+
+    let result = cmd
+        .clone()
+        .try_get_matches_from(["test", "--mammal", "--mammal"]);
+    let err = result.err().unwrap();
+    assert_eq!(err.kind(), ErrorKind::ArgumentConflict);
 
     let matches = cmd
         .clone()
+        .args_override_self(true)
         .try_get_matches_from(["test", "--mammal", "--mammal"])
         .unwrap();
     assert_eq!(*matches.get_one::<bool>("mammal").unwrap(), false);
     assert_eq!(matches.contains_id("mammal"), true);
-    #[allow(deprecated)]
-    {
-        assert_eq!(matches.occurrences_of("mammal"), 0);
-    }
     assert_eq!(matches.index_of("mammal"), Some(2));
 }
 
@@ -304,19 +271,11 @@ fn set_false_with_explicit_default_value() {
         .unwrap();
     assert_eq!(*matches.get_one::<bool>("mammal").unwrap(), false);
     assert_eq!(matches.contains_id("mammal"), true);
-    #[allow(deprecated)]
-    {
-        assert_eq!(matches.occurrences_of("mammal"), 0);
-    }
     assert_eq!(matches.index_of("mammal"), Some(1));
 
     let matches = cmd.clone().try_get_matches_from(["test"]).unwrap();
     assert_eq!(*matches.get_one::<bool>("mammal").unwrap(), true);
     assert_eq!(matches.contains_id("mammal"), true);
-    #[allow(deprecated)]
-    {
-        assert_eq!(matches.occurrences_of("mammal"), 0);
-    }
     assert_eq!(matches.index_of("mammal"), Some(1));
 }
 
@@ -327,7 +286,7 @@ fn set_false_with_default_value_if_present() {
             Arg::new("mammal")
                 .long("mammal")
                 .action(ArgAction::SetFalse)
-                .default_value_if("dog", None, Some("false")),
+                .default_value_if("dog", ArgPredicate::IsPresent, Some("false")),
         )
         .arg(Arg::new("dog").long("dog").action(ArgAction::SetFalse));
 
@@ -354,7 +313,7 @@ fn set_false_with_default_value_if_value() {
             Arg::new("mammal")
                 .long("mammal")
                 .action(ArgAction::SetFalse)
-                .default_value_if("dog", Some("false"), Some("false")),
+                .default_value_if("dog", "false", Some("false")),
         )
         .arg(Arg::new("dog").long("dog").action(ArgAction::SetFalse));
 
@@ -381,10 +340,6 @@ fn count() {
     let matches = cmd.clone().try_get_matches_from(["test"]).unwrap();
     assert_eq!(*matches.get_one::<u8>("mammal").unwrap(), 0);
     assert_eq!(matches.contains_id("mammal"), true);
-    #[allow(deprecated)]
-    {
-        assert_eq!(matches.occurrences_of("mammal"), 0);
-    }
     assert_eq!(matches.index_of("mammal"), Some(1));
 
     let matches = cmd
@@ -393,10 +348,6 @@ fn count() {
         .unwrap();
     assert_eq!(*matches.get_one::<u8>("mammal").unwrap(), 1);
     assert_eq!(matches.contains_id("mammal"), true);
-    #[allow(deprecated)]
-    {
-        assert_eq!(matches.occurrences_of("mammal"), 0);
-    }
     assert_eq!(matches.index_of("mammal"), Some(1));
 
     let matches = cmd
@@ -405,10 +356,6 @@ fn count() {
         .unwrap();
     assert_eq!(*matches.get_one::<u8>("mammal").unwrap(), 2);
     assert_eq!(matches.contains_id("mammal"), true);
-    #[allow(deprecated)]
-    {
-        assert_eq!(matches.occurrences_of("mammal"), 0);
-    }
     assert_eq!(matches.index_of("mammal"), Some(2));
 }
 
@@ -427,19 +374,11 @@ fn count_with_explicit_default_value() {
         .unwrap();
     assert_eq!(*matches.get_one::<u8>("mammal").unwrap(), 1);
     assert_eq!(matches.contains_id("mammal"), true);
-    #[allow(deprecated)]
-    {
-        assert_eq!(matches.occurrences_of("mammal"), 0);
-    }
     assert_eq!(matches.index_of("mammal"), Some(1));
 
     let matches = cmd.clone().try_get_matches_from(["test"]).unwrap();
     assert_eq!(*matches.get_one::<u8>("mammal").unwrap(), 10);
     assert_eq!(matches.contains_id("mammal"), true);
-    #[allow(deprecated)]
-    {
-        assert_eq!(matches.occurrences_of("mammal"), 0);
-    }
     assert_eq!(matches.index_of("mammal"), Some(1));
 }
 
@@ -450,7 +389,7 @@ fn count_with_default_value_if_present() {
             Arg::new("mammal")
                 .long("mammal")
                 .action(ArgAction::Count)
-                .default_value_if("dog", None, Some("10")),
+                .default_value_if("dog", ArgPredicate::IsPresent, Some("10")),
         )
         .arg(Arg::new("dog").long("dog").action(ArgAction::Count));
 
@@ -477,7 +416,7 @@ fn count_with_default_value_if_value() {
             Arg::new("mammal")
                 .long("mammal")
                 .action(ArgAction::Count)
-                .default_value_if("dog", Some("2"), Some("10")),
+                .default_value_if("dog", "2", Some("10")),
         )
         .arg(Arg::new("dog").long("dog").action(ArgAction::Count));
 

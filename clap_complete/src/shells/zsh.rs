@@ -153,12 +153,10 @@ fn subcommands_of(p: &Command) -> String {
         let text = format!(
             "'{name}:{help}' \\",
             name = name,
-            help = escape_help(subcommand.get_about().unwrap_or(""))
+            help = escape_help(&subcommand.get_about().unwrap_or_default().to_string())
         );
 
-        if !text.is_empty() {
-            ret.push(text);
-        }
+        ret.push(text);
     }
 
     // The subcommands
@@ -234,7 +232,7 @@ fn get_subcommands_of(parent: &Command) -> String {
         );
         let mut segments = vec![format!("({})", name)];
         let subcommand_args = get_args_of(
-            parser_of(parent, &*bin_name).expect(INTERNAL_ERROR_MSG),
+            parser_of(parent, bin_name).expect(INTERNAL_ERROR_MSG),
             Some(parent),
         );
 
@@ -243,7 +241,7 @@ fn get_subcommands_of(parent: &Command) -> String {
         }
 
         // Get the help text of all child subcommands.
-        let children = get_subcommands_of(parser_of(parent, &*bin_name).expect(INTERNAL_ERROR_MSG));
+        let children = get_subcommands_of(parser_of(parent, bin_name).expect(INTERNAL_ERROR_MSG));
 
         if !children.is_empty() {
             segments.push(children);
@@ -280,13 +278,10 @@ esac",
 //
 // Given the bin_name "a b c" and the Command for "a" this returns the "c" Command.
 // Given the bin_name "a b c" and the Command for "b" this returns the "c" Command.
-fn parser_of<'help, 'cmd>(
-    parent: &'cmd Command<'help>,
-    bin_name: &str,
-) -> Option<&'cmd Command<'help>> {
+fn parser_of<'cmd>(parent: &'cmd Command, bin_name: &str) -> Option<&'cmd Command> {
     debug!("parser_of: p={}, bin_name={}", parent.get_name(), bin_name);
 
-    if bin_name == parent.get_bin_name().unwrap_or(&String::new()) {
+    if bin_name == parent.get_bin_name().unwrap_or_default() {
         return Some(parent);
     }
 
@@ -375,7 +370,8 @@ fn value_completion(arg: &Arg) -> Option<String> {
                             Some(format!(
                                 r#"{name}\:"{tooltip}""#,
                                 name = escape_value(value.get_name()),
-                                tooltip = value.get_help().map(escape_help).unwrap_or_default()
+                                tooltip =
+                                    escape_help(&value.get_help().unwrap_or_default().to_string()),
                             ))
                         }
                     })
@@ -388,7 +384,7 @@ fn value_completion(arg: &Arg) -> Option<String> {
                 values
                     .iter()
                     .filter(|pv| !pv.is_hide_set())
-                    .map(PossibleValue::get_name)
+                    .map(|n| n.get_name())
                     .collect::<Vec<_>>()
                     .join(" ")
             ))
@@ -448,11 +444,10 @@ fn write_opts_of(p: &Command, p_global: Option<&Command>) -> String {
     for o in p.get_opts() {
         debug!("write_opts_of:iter: o={}", o.get_id());
 
-        let help = o.get_help().map_or(String::new(), escape_help);
+        let help = escape_help(&o.get_help().unwrap_or_default().to_string());
         let conflicts = arg_conflicts(p, o, p_global);
 
-        #[allow(deprecated)]
-        let multiple = if o.is_multiple_occurrences_set() {
+        let multiple = if let ArgAction::Count | ArgAction::Append = o.get_action() {
             "*"
         } else {
             ""
@@ -466,10 +461,7 @@ fn write_opts_of(p: &Command, p_global: Option<&Command>) -> String {
             Some(val) => format!(":{}:{}", vn, val),
             None => format!(":{}: ", vn),
         };
-        let vc = match o.get_num_vals() {
-            Some(num_vals) => vc.repeat(num_vals),
-            None => vc,
-        };
+        let vc = vc.repeat(o.get_num_args().expect("built").min_values());
 
         if let Some(shorts) = o.get_short_and_visible_aliases() {
             for short in shorts {
@@ -552,11 +544,10 @@ fn write_flags_of(p: &Command, p_global: Option<&Command>) -> String {
     for f in utils::flags(p) {
         debug!("write_flags_of:iter: f={}", f.get_id());
 
-        let help = f.get_help().map_or(String::new(), escape_help);
+        let help = escape_help(&f.get_help().unwrap_or_default().to_string());
         let conflicts = arg_conflicts(p, &f, p_global);
 
-        #[allow(deprecated)]
-        let multiple = if f.is_multiple_occurrences_set() {
+        let multiple = if let ArgAction::Count | ArgAction::Append = f.get_action() {
             "*"
         } else {
             ""
@@ -634,8 +625,8 @@ fn write_positionals_of(p: &Command) -> String {
     for arg in p.get_positionals() {
         debug!("write_positionals_of:iter: arg={}", arg.get_id());
 
-        #[allow(deprecated)]
-        let cardinality = if arg.is_multiple_values_set() || arg.is_multiple_occurrences_set() {
+        let num_args = arg.get_num_args().expect("built");
+        let cardinality = if num_args.max_values() > 1 {
             "*:"
         } else if !arg.is_required_set() {
             ":"
@@ -649,7 +640,8 @@ fn write_positionals_of(p: &Command) -> String {
             name = arg.get_id(),
             help = arg
                 .get_help()
-                .map_or("".to_owned(), |v| " -- ".to_owned() + v)
+                .map(|s| s.to_string())
+                .map_or("".to_owned(), |v| " -- ".to_owned() + &v)
                 .replace('[', "\\[")
                 .replace(']', "\\]")
                 .replace('\'', "'\\''")

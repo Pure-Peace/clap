@@ -4,33 +4,33 @@
 .SH NAME
 my/-app
 .SH SYNOPSIS
-/fBmy/-app/fR [/fB/-h/fR|/fB/-/-help/fR] [/fB/-V/fR|/fB/-/-version/fR] [/fB/-/-single/-quotes/fR] [/fB/-/-double/-quotes/fR] [/fB/-/-backticks/fR] [/fB/-/-backslash/fR] [/fB/-/-brackets/fR] [/fB/-/-expansions/fR] [/fIsubcommands/fR]
+/fBmy/-app/fR [/fB/-/-single/-quotes/fR] [/fB/-/-double/-quotes/fR] [/fB/-/-backticks/fR] [/fB/-/-backslash/fR] [/fB/-/-brackets/fR] [/fB/-/-expansions/fR] [/fB/-h/fR|/fB/-/-help/fR] [/fB/-V/fR|/fB/-/-version/fR] [/fIsubcommands/fR]
 .SH DESCRIPTION
 .SH OPTIONS
+.TP
+/fB/-/-single/-quotes/fR [default: false]
+Can be /*(Aqalways/*(Aq, /*(Aqauto/*(Aq, or /*(Aqnever/*(Aq
+.TP
+/fB/-/-double/-quotes/fR [default: false]
+Can be "always", "auto", or "never"
+.TP
+/fB/-/-backticks/fR [default: false]
+For more information see `echo test`
+.TP
+/fB/-/-backslash/fR [default: false]
+Avoid /*(Aq//n/*(Aq
+.TP
+/fB/-/-brackets/fR [default: false]
+List packages [filter]
+.TP
+/fB/-/-expansions/fR [default: false]
+Execute the shell command with $SHELL
 .TP
 /fB/-h/fR, /fB/-/-help/fR
 Print help information
 .TP
 /fB/-V/fR, /fB/-/-version/fR
 Print version information
-.TP
-/fB/-/-single/-quotes/fR
-Can be /*(Aqalways/*(Aq, /*(Aqauto/*(Aq, or /*(Aqnever/*(Aq
-.TP
-/fB/-/-double/-quotes/fR
-Can be "always", "auto", or "never"
-.TP
-/fB/-/-backticks/fR
-For more information see `echo test`
-.TP
-/fB/-/-backslash/fR
-Avoid /*(Aq//n/*(Aq
-.TP
-/fB/-/-brackets/fR
-List packages [filter]
-.TP
-/fB/-/-expansions/fR
-Execute the shell command with $SHELL
 .SH SUBCOMMANDS
 .TP
 my/-app/-cmd/-single/-quotes(1)

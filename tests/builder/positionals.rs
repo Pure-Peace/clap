@@ -18,12 +18,12 @@ fn only_pos_follow() {
 #[test]
 fn issue_946() {
     let r = Command::new("compiletest")
-        .allow_hyphen_values(true)
         .arg(arg!(--exact    "filters match exactly").action(ArgAction::SetTrue))
         .arg(
             clap::Arg::new("filter")
                 .index(1)
-                .takes_value(true)
+                .action(ArgAction::Set)
+                .allow_hyphen_values(true)
                 .help("filters to apply to output"),
         )
         .try_get_matches_from(vec!["compiletest", "--exact"]);
@@ -120,8 +120,8 @@ fn positional_multiple() {
             arg!(-f --flag "some flag").action(ArgAction::SetTrue),
             Arg::new("positional")
                 .index(1)
-                .takes_value(true)
-                .multiple_values(true),
+                .action(ArgAction::Set)
+                .num_args(1..),
         ])
         .try_get_matches_from(vec!["", "-f", "test1", "test2", "test3"]);
     assert!(r.is_ok(), "{:#?}", r);
@@ -144,8 +144,8 @@ fn positional_multiple_3() {
             arg!(-f  --flag "some flag").action(ArgAction::SetTrue),
             Arg::new("positional")
                 .index(1)
-                .takes_value(true)
-                .multiple_values(true),
+                .action(ArgAction::Set)
+                .num_args(1..),
         ])
         .try_get_matches_from(vec!["", "test1", "test2", "test3", "--flag"]);
     assert!(r.is_ok(), "{:#?}", r);
@@ -211,13 +211,13 @@ fn positional_hyphen_does_not_panic() {
 #[test]
 fn single_positional_usage_string() {
     let mut cmd = Command::new("test").arg(arg!([FILE] "some file"));
-    assert_eq!(cmd.render_usage(), "USAGE:\n    test [FILE]");
+    crate::utils::assert_eq(cmd.render_usage().to_string(), "Usage: test [FILE]");
 }
 
 #[test]
 fn single_positional_multiple_usage_string() {
     let mut cmd = Command::new("test").arg(arg!([FILE]... "some file"));
-    assert_eq!(cmd.render_usage(), "USAGE:\n    test [FILE]...");
+    crate::utils::assert_eq(cmd.render_usage().to_string(), "Usage: test [FILE]...");
 }
 
 #[test]
@@ -225,7 +225,11 @@ fn multiple_positional_usage_string() {
     let mut cmd = Command::new("test")
         .arg(arg!([FILE] "some file"))
         .arg(arg!([FILES]... "some file"));
-    assert_eq!(cmd.render_usage(), "USAGE:\n    test [ARGS]");
+    crate::utils::assert_eq(
+        cmd.render_usage().to_string(),
+        "\
+Usage: test [FILE] [FILES]...",
+    );
 }
 
 #[test]
@@ -233,13 +237,16 @@ fn multiple_positional_one_required_usage_string() {
     let mut cmd = Command::new("test")
         .arg(arg!(<FILE> "some file"))
         .arg(arg!([FILES]... "some file"));
-    assert_eq!(cmd.render_usage(), "USAGE:\n    test <FILE> [FILES]...");
+    crate::utils::assert_eq(
+        cmd.render_usage().to_string(),
+        "Usage: test <FILE> [FILES]...",
+    );
 }
 
 #[test]
 fn single_positional_required_usage_string() {
     let mut cmd = Command::new("test").arg(arg!(<FILE> "some file"));
-    assert_eq!(cmd.render_usage(), "USAGE:\n    test <FILE>");
+    crate::utils::assert_eq(cmd.render_usage().to_string(), "Usage: test <FILE>");
 }
 
 // This tests a programmer error and will only succeed with debug_assertions
@@ -330,7 +337,7 @@ fn ignore_hyphen_values_on_last() {
     let cmd = clap::Command::new("foo")
         .arg(
             clap::Arg::new("cmd")
-                .multiple_values(true)
+                .num_args(1..)
                 .last(true)
                 .allow_hyphen_values(true),
         )
@@ -338,7 +345,7 @@ fn ignore_hyphen_values_on_last() {
             clap::Arg::new("name")
                 .long("name")
                 .short('n')
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .required(false),
         );
 

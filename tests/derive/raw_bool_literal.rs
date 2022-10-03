@@ -11,11 +11,11 @@ use clap::Parser;
 #[test]
 fn raw_bool_literal() {
     #[derive(Parser, Debug, PartialEq)]
-    #[clap(name = "raw_bool")]
+    #[command(name = "raw_bool")]
     struct Opt {
-        #[clap(raw(false), value_parser)]
+        #[arg(raw(false))]
         a: String,
-        #[clap(raw(true), value_parser)]
+        #[arg(raw(true))]
         b: String,
     }
 

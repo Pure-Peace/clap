@@ -6,7 +6,6 @@
 use clap::{value_parser, Arg, ArgAction, Command};
 use criterion::{criterion_group, criterion_main, Criterion};
 use std::collections::HashMap;
-use std::io::Cursor;
 
 use lazy_static::lazy_static;
 
@@ -270,21 +269,19 @@ OPTIONS:
 {options}";
 
 /// Build a clap application with short help strings.
-fn app_short() -> Command<'static> {
+fn app_short() -> Command {
     cmd(false, |k| USAGES[k].short)
 }
 
 /// Build a clap application with long help strings.
-fn app_long() -> Command<'static> {
+fn app_long() -> Command {
     cmd(true, |k| USAGES[k].long)
 }
 
 /// Build the help text of an application.
 fn build_help(cmd: &mut Command) -> String {
-    let mut buf = Cursor::new(Vec::with_capacity(50));
-    cmd.write_help(&mut buf).unwrap();
-    let content = buf.into_inner();
-    String::from_utf8(content).unwrap()
+    let help = cmd.render_help();
+    help.to_string()
 }
 
 /// Build a clap application parameterized by usage strings.
@@ -294,12 +291,12 @@ fn build_help(cmd: &mut Command) -> String {
 ///
 /// This is an intentionally stand-alone module so that it can be used easily
 /// in a `build.rs` script to build shell completion files.
-fn cmd<F>(_next_line_help: bool, doc: F) -> Command<'static>
+fn cmd<F>(_next_line_help: bool, doc: F) -> Command
 where
     F: Fn(&'static str) -> &'static str,
 {
     let arg = |name| Arg::new(name).help(doc(name));
-    let flag = |name| arg(name).long(name);
+    let flag = |name| arg(name).long(name).action(ArgAction::SetTrue);
 
     Command::new("ripgrep")
         .author("BurntSushi") // simulating since it's only a bench
@@ -310,11 +307,13 @@ where
         .help_template(TEMPLATE)
         // Handle help/version manually to make their output formatting
         // consistent with short/long views.
+        .disable_help_flag(true)
+        .disable_version_flag(true)
         .arg(arg("help-short").short('h'))
         .arg(flag("help"))
         .arg(flag("version").short('V'))
         // First, set up primary positional/flag arguments.
-        .arg(arg("pattern").required_unless_present_any(&[
+        .arg(arg("pattern").required_unless_present_any([
             "file",
             "files",
             "help-short",
@@ -323,44 +322,37 @@ where
             "type-list",
             "version",
         ]))
-        .arg(arg("path").takes_value(true).multiple_values(true))
+        .arg(arg("path").num_args(1..))
         .arg(
             flag("regexp")
                 .short('e')
                 .allow_hyphen_values(true)
                 .action(ArgAction::Append)
-                .takes_value(true)
                 .value_name("pattern"),
         )
         .arg(
             flag("files")
                 // This should also conflict with `pattern`, but the first file
                 // path will actually be in `pattern`.
-                .conflicts_with_all(&["file", "regexp", "type-list"]),
+                .conflicts_with_all(["file", "regexp", "type-list"]),
         )
-        .arg(flag("type-list").conflicts_with_all(&["file", "files", "pattern", "regexp"]))
+        .arg(flag("type-list").conflicts_with_all(["file", "files", "pattern", "regexp"]))
         // Second, set up common flags.
         .arg(flag("text").short('a'))
         .arg(flag("count").short('c'))
         .arg(
             flag("color")
                 .value_name("WHEN")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .hide_possible_values(true)
                 .value_parser(["never", "auto", "always", "ansi"]),
         )
-        .arg(
-            flag("colors")
-                .value_name("SPEC")
-                .action(ArgAction::Append)
-                .takes_value(true),
-        )
+        .arg(flag("colors").value_name("SPEC").action(ArgAction::Append))
         .arg(flag("fixed-strings").short('F'))
         .arg(
             flag("glob")
                 .short('g')
                 .action(ArgAction::Append)
-                .takes_value(true)
                 .value_name("GLOB"),
         )
         .arg(flag("ignore-case").short('i'))
@@ -371,14 +363,12 @@ where
             flag("type")
                 .short('t')
                 .action(ArgAction::Append)
-                .takes_value(true)
                 .value_name("TYPE"),
         )
         .arg(
             flag("type-not")
                 .short('T')
                 .action(ArgAction::Append)
-                .takes_value(true)
                 .value_name("TYPE"),
         )
         .arg(flag("unrestricted").short('u').action(ArgAction::Append))
@@ -388,18 +378,21 @@ where
         .arg(
             flag("after-context")
                 .short('A')
+                .action(ArgAction::Set)
                 .value_name("NUM")
                 .value_parser(value_parser!(usize)),
         )
         .arg(
             flag("before-context")
                 .short('B')
+                .action(ArgAction::Set)
                 .value_name("NUM")
                 .value_parser(value_parser!(usize)),
         )
         .arg(
             flag("context")
                 .short('C')
+                .action(ArgAction::Set)
                 .value_name("NUM")
                 .value_parser(value_parser!(usize)),
         )
@@ -428,11 +421,13 @@ where
         .arg(
             flag("max-count")
                 .short('m')
+                .action(ArgAction::Set)
                 .value_name("NUM")
                 .value_parser(value_parser!(usize)),
         )
         .arg(
             flag("maxdepth")
+                .action(ArgAction::Set)
                 .value_name("NUM")
                 .value_parser(value_parser!(usize)),
         )
@@ -445,13 +440,19 @@ where
         .arg(flag("null"))
         .arg(flag("path-separator").value_name("SEPARATOR"))
         .arg(flag("pretty").short('p'))
-        .arg(flag("replace").short('r').value_name("ARG"))
+        .arg(
+            flag("replace")
+                .short('r')
+                .action(ArgAction::Set)
+                .value_name("ARG"),
+        )
         .arg(flag("case-sensitive").short('s'))
         .arg(flag("smart-case").short('S'))
         .arg(flag("sort-files"))
         .arg(
             flag("threads")
                 .short('j')
+                .action(ArgAction::Set)
                 .value_name("ARG")
                 .value_parser(value_parser!(usize)),
         )

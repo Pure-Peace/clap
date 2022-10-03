@@ -6,8 +6,7 @@ static EXAMPLE1_TMPL_S: &str = "{bin} {version}
 {author}
 {about}
 
-USAGE:
-    {usage}
+Usage: {usage}
 
 {all-args}";
 
@@ -15,54 +14,51 @@ static EXAMPLE1_TMPS_F: &str = "{bin} {version}
 {author}
 {about}
 
-USAGE:
-    {usage}
+Usage: {usage}
 
-OPTIONS:
+Options:
 {options}
-ARGS:
+Arguments:
 {positionals}
-SUBCOMMANDS:
+Commands:
 {subcommands}";
 
 static CUSTOM_TEMPL_HELP: &str = "MyApp 1.0
 Kevin K. <kbknapp@gmail.com>
 Does awesome things
 
-USAGE:
-    MyApp [OPTIONS] <output> [SUBCOMMAND]
+Usage: MyApp [OPTIONS] <output> [COMMAND]
 
-OPTIONS:
-    -c, --config <FILE>    Sets a custom config file
-    -d                     Turn debugging information on
-    -h, --help             Print help information
-    -V, --version          Print version information
-ARGS:
-    <output>    Sets an optional output file
-SUBCOMMANDS:
-    help    Print this message or the help of the given subcommand(s)
-    test    does testing things
+Options:
+  -c, --config <FILE>  Sets a custom config file
+  -d...                Turn debugging information on
+  -h, --help           Print help information
+  -V, --version        Print version information
+Arguments:
+  <output>  Sets an optional output file
+Commands:
+  test  does testing things
+  help  Print this message or the help of the given subcommand(s)
 ";
 
 static SIMPLE_TEMPLATE: &str = "MyApp 1.0
 Kevin K. <kbknapp@gmail.com>
 Does awesome things
 
-USAGE:
-    MyApp [OPTIONS] <output> [SUBCOMMAND]
+Usage: MyApp [OPTIONS] <output> [COMMAND]
 
-ARGS:
-    <output>    Sets an optional output file
+Commands:
+  test  does testing things
+  help  Print this message or the help of the given subcommand(s)
 
-OPTIONS:
-    -c, --config <FILE>    Sets a custom config file
-    -d                     Turn debugging information on
-    -h, --help             Print help information
-    -V, --version          Print version information
+Arguments:
+  <output>  Sets an optional output file
 
-SUBCOMMANDS:
-    help    Print this message or the help of the given subcommand(s)
-    test    does testing things
+Options:
+  -c, --config <FILE>  Sets a custom config file
+  -d...                Turn debugging information on
+  -h, --help           Print help information
+  -V, --version        Print version information
 ";
 
 #[test]
@@ -124,7 +120,7 @@ fn template_author_version() {
 
 // ----------
 
-fn get_app() -> Command<'static> {
+fn get_app() -> Command {
     Command::new("MyApp")
         .version("1.0")
         .author("Kevin K. <kbknapp@gmail.com>")

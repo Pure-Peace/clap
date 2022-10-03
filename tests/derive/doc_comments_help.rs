@@ -23,7 +23,7 @@ fn doc_comments() {
     struct LoremIpsum {
         /// Fooify a bar
         /// and a baz
-        #[clap(short, long, action)]
+        #[arg(short, long)]
         foo: bool,
     }
 
@@ -36,15 +36,10 @@ fn doc_comments() {
 fn help_is_better_than_comments() {
     /// Lorem ipsum
     #[derive(Parser, PartialEq, Debug)]
-    #[clap(name = "lorem-ipsum", about = "Dolor sit amet")]
+    #[command(name = "lorem-ipsum", about = "Dolor sit amet")]
     struct LoremIpsum {
         /// Fooify a bar
-        #[clap(
-            short,
-            long,
-            help = "DO NOT PASS A BAR UNDER ANY CIRCUMSTANCES",
-            action
-        )]
+        #[arg(short, long, help = "DO NOT PASS A BAR UNDER ANY CIRCUMSTANCES")]
         foo: bool,
     }
 
@@ -60,27 +55,34 @@ fn empty_line_in_doc_comment_is_double_linefeed() {
     ///
     /// Bar
     #[derive(Parser, PartialEq, Debug)]
-    #[clap(name = "lorem-ipsum")]
+    #[command(name = "lorem-ipsum")]
     struct LoremIpsum {}
 
     let help = utils::get_long_help::<LoremIpsum>();
-    assert!(help.starts_with("lorem-ipsum \nFoo.\n\nBar\n\nUSAGE:"));
+    assert!(help.starts_with(
+        "\
+Foo.
+
+Bar
+
+Usage:"
+    ));
 }
 
 #[test]
 fn field_long_doc_comment_both_help_long_help() {
     /// Lorem ipsumclap
     #[derive(Parser, PartialEq, Debug)]
-    #[clap(name = "lorem-ipsum", about = "Dolor sit amet")]
+    #[command(name = "lorem-ipsum", about = "Dolor sit amet")]
     struct LoremIpsum {
         /// Dot is removed from multiline comments.
         ///
         /// Long help
-        #[clap(long, action)]
+        #[arg(long)]
         foo: bool,
 
         /// Dot is removed from one short comment.
-        #[clap(long, action)]
+        #[arg(long)]
         bar: bool,
     }
 
@@ -99,9 +101,9 @@ fn field_long_doc_comment_both_help_long_help() {
 fn top_long_doc_comment_both_help_long_help() {
     /// Lorem ipsumclap
     #[derive(Parser, Debug)]
-    #[clap(name = "lorem-ipsum", about = "Dolor sit amet")]
+    #[command(name = "lorem-ipsum", about = "Dolor sit amet")]
     struct LoremIpsum {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         foo: SubCommand,
     }
 
@@ -111,7 +113,7 @@ fn top_long_doc_comment_both_help_long_help() {
         ///
         /// Or something else
         Foo {
-            #[clap(value_parser, help = "foo")]
+            #[arg(help = "foo")]
             bars: String,
         },
     }
@@ -144,9 +146,9 @@ fn verbatim_doc_comment() {
     ///      ( ()    ||
     ///       (      () ) )
     #[derive(Parser, Debug)]
-    #[clap(verbatim_doc_comment)]
+    #[command(verbatim_doc_comment)]
     struct SeeFigure1 {
-        #[clap(long, action)]
+        #[arg(long)]
         foo: bool,
     }
 
@@ -176,10 +178,10 @@ fn verbatim_doc_comment_field() {
     #[derive(Parser, Debug)]
     struct Command {
         /// This help ends in a period.
-        #[clap(long, verbatim_doc_comment, action)]
+        #[arg(long, verbatim_doc_comment)]
         foo: bool,
         /// This help does not end in a period.
-        #[clap(long, action)]
+        #[arg(long)]
         bar: bool,
     }
 
@@ -196,7 +198,7 @@ fn multiline_separates_default() {
         /// Multiline
         ///
         /// Doc comment
-        #[clap(long, default_value = "x", value_parser)]
+        #[arg(long, default_value = "x")]
         x: String,
     }
 
@@ -225,7 +227,7 @@ fn doc_comment_about_handles_both_abouts() {
     /// Opts doc comment summary
     #[derive(Parser, Debug)]
     pub struct Opts {
-        #[clap(subcommand)]
+        #[command(subcommand)]
         pub cmd: Sub,
     }
 
@@ -234,14 +236,14 @@ fn doc_comment_about_handles_both_abouts() {
     /// Sub doc comment body
     #[derive(Parser, PartialEq, Eq, Debug)]
     pub enum Sub {
-        Compress {
-            #[clap(value_parser)]
-            output: String,
-        },
+        Compress { output: String },
     }
 
     let cmd = Opts::command();
-    assert_eq!(cmd.get_about(), Some("Opts doc comment summary"));
+    assert_eq!(
+        cmd.get_about().map(|s| s.to_string()),
+        Some("Opts doc comment summary".to_owned())
+    );
     // clap will fallback to `about` on `None`.  The main care about is not providing a `Sub` doc
     // comment.
     assert_eq!(cmd.get_long_about(), None);

@@ -6,13 +6,9 @@
 // option. This file may not be copied, modified, or distributed
 
 #[cfg(feature = "derive")]
-#[rustversion::attr(any(not(stable), before(1.56), since(1.57)), ignore)] // MSRV
+#[rustversion::attr(any(not(stable), before(1.60), since(1.61)), ignore)] // MSRV
 #[test]
 fn ui() {
     let t = trybuild::TestCases::new();
     t.compile_fail("tests/derive_ui/*.rs");
-    #[cfg(feature = "unstable-v4")]
-    t.compile_fail("tests/derive_ui/next/*.rs");
-    #[cfg(not(feature = "unstable-v4"))]
-    t.compile_fail("tests/derive_ui/stable/*.rs");
 }

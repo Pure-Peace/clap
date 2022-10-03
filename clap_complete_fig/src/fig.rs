@@ -1,5 +1,6 @@
-// Std
-use std::io::Write;
+#![allow(clippy::write_with_newline)]
+
+use std::fmt::Write;
 
 // Internal
 use clap::*;
@@ -13,32 +14,41 @@ impl Generator for Fig {
         format!("{}.ts", name)
     }
 
-    fn generate(&self, cmd: &Command, buf: &mut dyn Write) {
+    fn generate(&self, cmd: &Command, buf: &mut dyn std::io::Write) {
         let command = cmd.get_bin_name().unwrap();
         let mut buffer = String::new();
 
-        buffer.push_str(&format!(
+        write!(
+            &mut buffer,
             "const completion: Fig.Spec = {{\n  name: \"{}\",\n",
-            command
-        ));
+            escape_string(command)
+        )
+        .unwrap();
 
-        buffer.push_str(&format!(
+        write!(
+            &mut buffer,
             "  description: \"{}\",\n",
-            cmd.get_about().unwrap_or_default()
-        ));
+            escape_string(&cmd.get_about().unwrap_or_default().to_string())
+        )
+        .unwrap();
 
         gen_fig_inner(command, &[], 2, cmd, &mut buffer);
 
-        buffer.push_str("};\n\nexport default completion;\n");
+        write!(&mut buffer, "}};\n\nexport default completion;\n").unwrap();
 
         buf.write_all(buffer.as_bytes())
             .expect("Failed to write to generated file");
     }
 }
 
-// Escape string inside double quotes
+// Escape string inside double quotes and convert whitespace
 fn escape_string(string: &str) -> String {
-    string.replace('\\', "\\\\").replace('\"', "\\\"")
+    string
+        .replace('\\', "\\\\")
+        .replace('\"', "\\\"")
+        .replace('\t', "    ")
+        .replace('\n', " ")
+        .replace('\r', "")
 }
 
 fn gen_fig_inner(
@@ -49,54 +59,56 @@ fn gen_fig_inner(
     buffer: &mut String,
 ) {
     if cmd.has_subcommands() {
-        buffer.push_str(&format!("{:indent$}subcommands: [\n", "", indent = indent));
+        write!(buffer, "{:indent$}subcommands: [\n", "", indent = indent).unwrap();
         // generate subcommands
         for subcommand in cmd.get_subcommands() {
             let mut aliases: Vec<&str> = subcommand.get_all_aliases().collect();
             if !aliases.is_empty() {
                 aliases.insert(0, subcommand.get_name());
 
-                buffer.push_str(&format!(
+                write!(
+                    buffer,
                     "{:indent$}{{\n{:indent$}  name: [",
                     "",
                     "",
                     indent = indent + 2
-                ));
+                )
+                .unwrap();
 
                 buffer.push_str(
                     &aliases
                         .iter()
-                        .map(|name| format!("\"{}\"", name))
+                        .map(|name| format!("\"{}\"", escape_string(name)))
                         .collect::<Vec<_>>()
                         .join(", "),
                 );
 
-                buffer.push_str("],\n");
+                write!(buffer, "],\n").unwrap();
             } else {
-                buffer.push_str(&format!(
+                write!(
+                    buffer,
                     "{:indent$}{{\n{:indent$}  name: \"{}\",\n",
                     "",
                     "",
-                    subcommand.get_name(),
+                    escape_string(subcommand.get_name()),
                     indent = indent + 2
-                ));
+                )
+                .unwrap();
             }
 
             if let Some(data) = subcommand.get_about() {
-                buffer.push_str(&format!(
+                write!(
+                    buffer,
                     "{:indent$}description: \"{}\",\n",
                     "",
-                    escape_string(data),
+                    escape_string(&data.to_string()),
                     indent = indent + 4
-                ));
+                )
+                .unwrap();
             }
 
             if subcommand.is_hide_set() {
-                buffer.push_str(&format!(
-                    "{:indent$}hidden: true,\n",
-                    "",
-                    indent = indent + 4
-                ))
+                write!(buffer, "{:indent$}hidden: true,\n", "", indent = indent + 4).unwrap();
             }
 
             let mut parent_commands: Vec<_> = parent_commands.into();
@@ -109,9 +121,9 @@ fn gen_fig_inner(
                 buffer,
             );
 
-            buffer.push_str(&format!("{:indent$}}},\n", "", indent = indent + 2));
+            write!(buffer, "{:indent$}}},\n", "", indent = indent + 2).unwrap();
         }
-        buffer.push_str(&format!("{:indent$}],\n", "", indent = indent));
+        write!(buffer, "{:indent$}],\n", "", indent = indent).unwrap();
     }
 
     buffer.push_str(&gen_options(cmd, indent));
@@ -121,17 +133,17 @@ fn gen_fig_inner(
     match args.len() {
         0 => {}
         1 => {
-            buffer.push_str(&format!("{:indent$}args: ", "", indent = indent));
+            write!(buffer, "{:indent$}args: ", "", indent = indent).unwrap();
 
             buffer.push_str(&gen_args(args[0], indent));
         }
         _ => {
-            buffer.push_str(&format!("{:indent$}args: [\n", "", indent = indent));
+            write!(buffer, "{:indent$}args: [\n", "", indent = indent).unwrap();
             for arg in args {
-                buffer.push_str(&format!("{:indent$}", "", indent = indent + 2));
+                write!(buffer, "{:indent$}", "", indent = indent + 2).unwrap();
                 buffer.push_str(&gen_args(arg, indent + 2));
             }
-            buffer.push_str(&format!("{:indent$}]\n", "", indent = indent));
+            write!(buffer, "{:indent$}]\n", "", indent = indent).unwrap();
         }
     };
 }
@@ -142,106 +154,127 @@ fn gen_options(cmd: &Command, indent: usize) -> String {
     let flags = generator::utils::flags(cmd);
 
     if cmd.get_opts().next().is_some() || !flags.is_empty() {
-        buffer.push_str(&format!("{:indent$}options: [\n", "", indent = indent));
+        write!(&mut buffer, "{:indent$}options: [\n", "", indent = indent).unwrap();
 
         for option in cmd.get_opts() {
-            buffer.push_str(&format!("{:indent$}{{\n", "", indent = indent + 2));
+            write!(&mut buffer, "{:indent$}{{\n", "", indent = indent + 2).unwrap();
 
             let mut names = vec![];
 
             if let Some(shorts) = option.get_short_and_visible_aliases() {
-                names.extend(shorts.iter().map(|short| format!("-{}", short)));
+                names.extend(
+                    shorts
+                        .iter()
+                        .map(|short| format!("-{}", escape_string(&short.to_string()))),
+                );
             }
 
             if let Some(longs) = option.get_long_and_visible_aliases() {
-                names.extend(longs.iter().map(|long| format!("--{}", long)));
+                names.extend(
+                    longs
+                        .iter()
+                        .map(|long| format!("--{}", escape_string(long))),
+                );
             }
 
             if names.len() > 1 {
-                buffer.push_str(&format!("{:indent$}name: [", "", indent = indent + 4));
+                write!(&mut buffer, "{:indent$}name: [", "", indent = indent + 4).unwrap();
 
                 buffer.push_str(
                     &names
                         .iter()
-                        .map(|name| format!("\"{}\"", name))
+                        .map(|name| format!("\"{}\"", escape_string(name)))
                         .collect::<Vec<_>>()
                         .join(", "),
                 );
 
                 buffer.push_str("],\n");
             } else {
-                buffer.push_str(&format!(
+                write!(
+                    &mut buffer,
                     "{:indent$}name: \"{}\",\n",
                     "",
-                    names[0],
+                    escape_string(&names[0]),
                     indent = indent + 4
-                ));
+                )
+                .unwrap();
             }
 
             if let Some(data) = option.get_help() {
-                buffer.push_str(&format!(
+                write!(
+                    &mut buffer,
                     "{:indent$}description: \"{}\",\n",
                     "",
-                    escape_string(data),
+                    escape_string(&data.to_string()),
                     indent = indent + 4
-                ));
+                )
+                .unwrap();
             }
 
             if option.is_hide_set() {
-                buffer.push_str(&format!(
+                write!(
+                    &mut buffer,
                     "{:indent$}hidden: true,\n",
                     "",
                     indent = indent + 4
-                ))
+                )
+                .unwrap();
             }
 
             let conflicts = arg_conflicts(cmd, option);
 
             if !conflicts.is_empty() {
-                buffer.push_str(&format!(
+                write!(
+                    &mut buffer,
                     "{:indent$}exclusiveOn: [\n",
                     "",
                     indent = indent + 4
-                ));
+                )
+                .unwrap();
 
                 for conflict in conflicts {
-                    buffer.push_str(&format!(
+                    write!(
+                        &mut buffer,
                         "{:indent$}\"{}\",\n",
                         "",
-                        conflict,
+                        escape_string(&conflict),
                         indent = indent + 6
-                    ));
+                    )
+                    .unwrap();
                 }
 
-                buffer.push_str(&format!("{:indent$}],\n", "", indent = indent + 4));
+                write!(&mut buffer, "{:indent$}],\n", "", indent = indent + 4).unwrap();
             }
 
-            #[allow(deprecated)]
-            if option.is_multiple_occurrences_set() {
-                buffer.push_str(&format!(
+            if let ArgAction::Set | ArgAction::Append | ArgAction::Count = option.get_action() {
+                write!(
+                    &mut buffer,
                     "{:indent$}isRepeatable: true,\n",
                     "",
                     indent = indent + 4
-                ));
+                )
+                .unwrap();
             }
 
             if option.is_require_equals_set() {
-                buffer.push_str(&format!(
+                write!(
+                    &mut buffer,
                     "{:indent$}requiresEquals: true,\n",
                     "",
                     indent = indent + 4
-                ));
+                )
+                .unwrap();
             }
 
-            buffer.push_str(&format!("{:indent$}args: ", "", indent = indent + 4));
+            write!(&mut buffer, "{:indent$}args: ", "", indent = indent + 4).unwrap();
 
             buffer.push_str(&gen_args(option, indent + 4));
 
-            buffer.push_str(&format!("{:indent$}}},\n", "", indent = indent + 2));
+            write!(&mut buffer, "{:indent$}}},\n", "", indent = indent + 2).unwrap();
         }
 
         for flag in generator::utils::flags(cmd) {
-            buffer.push_str(&format!("{:indent$}{{\n", "", indent = indent + 2));
+            write!(&mut buffer, "{:indent$}{{\n", "", indent = indent + 2).unwrap();
 
             let mut flags = vec![];
 
@@ -254,169 +287,199 @@ fn gen_options(cmd: &Command, indent: usize) -> String {
             }
 
             if flags.len() > 1 {
-                buffer.push_str(&format!("{:indent$}name: [", "", indent = indent + 4));
+                write!(&mut buffer, "{:indent$}name: [", "", indent = indent + 4).unwrap();
 
                 buffer.push_str(
                     &flags
                         .iter()
-                        .map(|name| format!("\"{}\"", name))
+                        .map(|name| format!("\"{}\"", escape_string(name)))
                         .collect::<Vec<_>>()
                         .join(", "),
                 );
 
                 buffer.push_str("],\n");
             } else {
-                buffer.push_str(&format!(
+                write!(
+                    &mut buffer,
                     "{:indent$}name: \"{}\",\n",
                     "",
-                    flags[0],
+                    escape_string(&flags[0]),
                     indent = indent + 4
-                ));
+                )
+                .unwrap();
             }
 
             if let Some(data) = flag.get_help() {
-                buffer.push_str(&format!(
+                write!(
+                    &mut buffer,
                     "{:indent$}description: \"{}\",\n",
                     "",
-                    escape_string(data).as_str(),
+                    escape_string(&data.to_string()).as_str(),
                     indent = indent + 4
-                ));
+                )
+                .unwrap();
             }
 
             let conflicts = arg_conflicts(cmd, &flag);
 
             if !conflicts.is_empty() {
-                buffer.push_str(&format!(
+                write!(
+                    &mut buffer,
                     "{:indent$}exclusiveOn: [\n",
                     "",
                     indent = indent + 4
-                ));
+                )
+                .unwrap();
 
                 for conflict in conflicts {
-                    buffer.push_str(&format!(
+                    write!(
+                        &mut buffer,
                         "{:indent$}\"{}\",\n",
                         "",
-                        conflict,
+                        escape_string(&conflict),
                         indent = indent + 6
-                    ));
+                    )
+                    .unwrap();
                 }
 
-                buffer.push_str(&format!("{:indent$}],\n", "", indent = indent + 4));
+                write!(&mut buffer, "{:indent$}],\n", "", indent = indent + 4).unwrap();
             }
 
-            #[allow(deprecated)]
-            if flag.is_multiple_occurrences_set() {
-                buffer.push_str(&format!(
+            if let ArgAction::Set | ArgAction::Append | ArgAction::Count = flag.get_action() {
+                write!(
+                    &mut buffer,
                     "{:indent$}isRepeatable: true,\n",
                     "",
                     indent = indent + 4
-                ));
+                )
+                .unwrap();
             }
 
-            buffer.push_str(&format!("{:indent$}}},\n", "", indent = indent + 2));
+            write!(&mut buffer, "{:indent$}}},\n", "", indent = indent + 2).unwrap();
         }
 
-        buffer.push_str(&format!("{:indent$}],\n", "", indent = indent));
+        write!(&mut buffer, "{:indent$}],\n", "", indent = indent).unwrap();
     }
 
     buffer
 }
 
 fn gen_args(arg: &Arg, indent: usize) -> String {
-    if !arg.is_takes_value_set() {
+    if !arg.get_num_args().expect("built").takes_values() {
         return "".to_string();
     }
 
     let mut buffer = String::new();
 
-    buffer.push_str(&format!(
+    write!(
+        &mut buffer,
         "{{\n{:indent$}  name: \"{}\",\n",
         "",
-        arg.get_id(),
+        escape_string(arg.get_id().as_str()),
         indent = indent
-    ));
+    )
+    .unwrap();
 
-    if arg.is_multiple_values_set() {
-        buffer.push_str(&format!(
+    let num_args = arg.get_num_args().expect("built");
+    if num_args != builder::ValueRange::EMPTY && num_args != builder::ValueRange::SINGLE {
+        write!(
+            &mut buffer,
             "{:indent$}isVariadic: true,\n",
             "",
             indent = indent + 2
-        ));
+        )
+        .unwrap();
     }
 
     if !arg.is_required_set() {
-        buffer.push_str(&format!(
+        write!(
+            &mut buffer,
             "{:indent$}isOptional: true,\n",
             "",
             indent = indent + 2
-        ));
+        )
+        .unwrap();
     }
 
     if let Some(data) = generator::utils::possible_values(arg) {
-        buffer.push_str(&format!(
+        write!(
+            &mut buffer,
             "{:indent$}suggestions: [\n",
             "",
             indent = indent + 2
-        ));
+        )
+        .unwrap();
 
         for value in data {
             if let Some(help) = value.get_help() {
-                buffer.push_str(&format!(
+                write!(
+                    &mut buffer,
                     "{:indent$}{{\n{:indent$}  name: \"{}\",\n",
                     "",
                     "",
-                    value.get_name(),
+                    escape_string(value.get_name()),
                     indent = indent + 4,
-                ));
+                )
+                .unwrap();
 
-                buffer.push_str(&format!(
+                write!(
+                    &mut buffer,
                     "{:indent$}description: \"{}\",\n",
                     "",
-                    escape_string(help),
+                    escape_string(&help.to_string()),
                     indent = indent + 6
-                ));
+                )
+                .unwrap();
 
-                buffer.push_str(&format!("{:indent$}}},\n", "", indent = indent + 4));
+                write!(&mut buffer, "{:indent$}}},\n", "", indent = indent + 4).unwrap();
             } else {
-                buffer.push_str(&format!(
+                write!(
+                    &mut buffer,
                     "{:indent$}\"{}\",\n",
                     "",
-                    value.get_name(),
+                    escape_string(value.get_name()),
                     indent = indent + 4,
-                ));
+                )
+                .unwrap();
             }
         }
 
-        buffer.push_str(&format!("{:indent$}],\n", "", indent = indent + 2));
+        write!(&mut buffer, "{:indent$}],\n", "", indent = indent + 2).unwrap();
     } else {
         match arg.get_value_hint() {
             ValueHint::AnyPath | ValueHint::FilePath | ValueHint::ExecutablePath => {
-                buffer.push_str(&format!(
+                write!(
+                    &mut buffer,
                     "{:indent$}template: \"filepaths\",\n",
                     "",
                     indent = indent + 2
-                ));
+                )
+                .unwrap();
             }
             ValueHint::DirPath => {
-                buffer.push_str(&format!(
+                write!(
+                    &mut buffer,
                     "{:indent$}template: \"folders\",\n",
                     "",
                     indent = indent + 2
-                ));
+                )
+                .unwrap();
             }
             ValueHint::CommandString | ValueHint::CommandName | ValueHint::CommandWithArguments => {
-                buffer.push_str(&format!(
+                write!(
+                    &mut buffer,
                     "{:indent$}isCommand: true,\n",
                     "",
                     indent = indent + 2
-                ));
+                )
+                .unwrap();
             }
             // Disable completion for others
             _ => (),
         };
     };
 
-    buffer.push_str(&format!("{:indent$}}},\n", "", indent = indent));
+    write!(&mut buffer, "{:indent$}}},\n", "", indent = indent).unwrap();
 
     buffer
 }
@@ -426,11 +489,11 @@ fn arg_conflicts(cmd: &Command, arg: &Arg) -> Vec<String> {
 
     for conflict in cmd.get_arg_conflicts_with(arg) {
         if let Some(s) = conflict.get_short() {
-            res.push(format!("-{}", s));
+            res.push(format!("-{}", escape_string(&s.to_string())));
         }
 
         if let Some(l) = conflict.get_long() {
-            res.push(format!("--{}", l));
+            res.push(format!("--{}", escape_string(l)));
         }
     }
 

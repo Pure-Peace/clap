@@ -4,15 +4,15 @@ version = "0.0.0"
 description = "Benchmarks for clap"
 license = "MIT OR Apache-2.0"
 edition = "2021"
-rust-version = "1.56.1"  # MSRV
+rust-version = "1.60.0"  # MSRV
 publish = false
 
 [package.metadata.release]
 release = false
 
 [dev-dependencies]
-clap = { path = "../", version = "3.2.1", default-features = false, features = ["std"] }
-criterion = "0.3.2"
+clap = { path = "../", version = "4.0.0-alpha.0", default-features = false, features = ["std", "help"] }
+criterion = "0.4.0"
 lazy_static = "1"
 
 [[bench]]

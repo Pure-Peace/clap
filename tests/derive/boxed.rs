@@ -2,21 +2,20 @@ use clap::{Args, Parser, Subcommand};
 
 #[derive(Parser, PartialEq, Debug)]
 struct Opt {
-    #[clap(subcommand)]
+    #[command(subcommand)]
     sub: Box<Sub>,
 }
 
 #[derive(Subcommand, PartialEq, Debug)]
 enum Sub {
     Flame {
-        #[clap(flatten)]
+        #[command(flatten)]
         arg: Box<Ext>,
     },
 }
 
 #[derive(Args, PartialEq, Debug)]
 struct Ext {
-    #[clap(value_parser)]
     arg: u32,
 }
 

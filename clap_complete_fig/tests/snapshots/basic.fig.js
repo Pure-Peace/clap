@@ -11,33 +11,30 @@ const completion: Fig.Spec = {
           isRepeatable: true,
         },
         {
-          name: ["-h", "--help"],
-          description: "Print help information",
+          name: "-c",
         },
         {
-          name: "-c",
+          name: ["-h", "--help"],
+          description: "Print help information",
         },
       ],
     },
     {
       name: "help",
       description: "Print this message or the help of the given subcommand(s)",
-      options: [
+      subcommands: [
         {
-          name: "-c",
+          name: "test",
+          description: "Subcommand",
+        },
+        {
+          name: "help",
+          description: "Print this message or the help of the given subcommand(s)",
         },
       ],
-      args: {
-        name: "subcommand",
-        isOptional: true,
-      },
     },
   ],
   options: [
-    {
-      name: ["-h", "--help"],
-      description: "Print help information",
-    },
     {
       name: "-c",
     },
@@ -46,6 +43,10 @@ const completion: Fig.Spec = {
       exclusiveOn: [
         "-c",
       ],
+    },
+    {
+      name: ["-h", "--help"],
+      description: "Print help information",
     },
   ],
 };

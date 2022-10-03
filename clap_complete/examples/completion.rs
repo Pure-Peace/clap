@@ -16,15 +16,9 @@ use clap::{value_parser, Arg, Command, ValueHint};
 use clap_complete::{generate, Generator, Shell};
 use std::io;
 
-fn build_cli() -> Command<'static> {
-    Command::new("value_hints")
-        // AppSettings::TrailingVarArg is required to use ValueHint::CommandWithArguments
-        .trailing_var_arg(true)
-        .arg(
-            Arg::new("generator")
-                .long("generate")
-                .value_parser(value_parser!(Shell)),
-        )
+fn build_cli() -> Command {
+    let value_hint_command = Command::new("value-hint")
+        .visible_alias("hint")
         .arg(
             Arg::new("unknown")
                 .long("unknown")
@@ -68,8 +62,9 @@ fn build_cli() -> Command<'static> {
         )
         .arg(
             Arg::new("command_with_args")
-                .takes_value(true)
-                .multiple_values(true)
+                .num_args(1..)
+                // AppSettings::TrailingVarArg is required to use ValueHint::CommandWithArguments
+                .trailing_var_arg(true)
                 .value_hint(ValueHint::CommandWithArguments),
         )
         .arg(
@@ -80,7 +75,6 @@ fn build_cli() -> Command<'static> {
         )
         .arg(
             Arg::new("host")
-                .short('h')
                 .long("host")
                 .value_hint(ValueHint::Hostname),
         )
@@ -89,7 +83,15 @@ fn build_cli() -> Command<'static> {
             Arg::new("email")
                 .long("email")
                 .value_hint(ValueHint::EmailAddress),
+        );
+
+    Command::new("completion")
+        .arg(
+            Arg::new("generator")
+                .long("generate")
+                .value_parser(value_parser!(Shell)),
         )
+        .subcommand(value_hint_command)
 }
 
 fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {

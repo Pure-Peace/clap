@@ -6,41 +6,44 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use clap::Parser;
+use clap::{Args, Parser};
 
 #[derive(Parser, Debug, PartialEq)]
 struct Main {
-    #[clap(short)]
+    #[arg(short)]
     s: String,
 
-    #[clap(long)]
+    #[arg(long)]
     some_string: String,
 
-    #[clap(long)]
+    #[arg(long)]
     same_name: String,
 
-    #[clap(flatten)]
+    #[command(flatten)]
     foo_args: Foo,
 
-    #[clap(flatten)]
+    #[command(flatten)]
     bar_args: Bar,
 }
 
-#[derive(Parser, Debug, PartialEq)]
-#[clap(prefix = "foo", next_help_heading = "Foo options")]
+#[derive(Args, Debug, PartialEq)]
+#[command(prefix = "foo", next_help_heading = "Foo options")]
 struct Foo {
-    #[clap(long)]
+    #[arg(long)]
     some_param: String,
 
-    #[clap(long)]
+    #[arg(long)]
     same_name: String, // without prefix, would conflict with the one in Main
 }
 
-#[derive(Parser, Debug, PartialEq)]
-#[clap(prefix = "bar", rename_all = "pascal", next_help_heading = "Bar options")]
+#[derive(Args, Debug, PartialEq)]
+#[command(prefix = "bar", rename_all = "pascal", next_help_heading = "Bar options")]
 struct Bar {
-    #[clap(long)]
+    #[arg(long)]
     another_param: String,
+
+    #[arg(long = "spaghetti")] // prefix does NOT get applied to this, nor does the rename_all.
+    weird_name: String,
 }
 
 #[test]
@@ -55,17 +58,19 @@ fn test_all() {
         },
         bar_args: Bar {
             another_param: "bar-another-param-value".to_string(),
+            weird_name: "bar-weird-name-value".to_string(),
         }
     };
 
-    let result = Main::try_parse_from(&[
+    let result = Main::parse_from(&[
         "test",
         "-s", "s-value",
         "--some-string", "some-string-value",
         "--same-name", "same-name-value",
         "--foo.some-param", "foo-some-param-value",
         "--foo.same-name=foo-same-name-value",
-        "--bar.AnotherParam", "bar-another-param-value",
-    ]).unwrap();
+        "--Bar.AnotherParam", "bar-another-param-value",
+        "--spaghetti", "bar-weird-name-value",
+    ]);
     assert_eq!(result, expected);
 }

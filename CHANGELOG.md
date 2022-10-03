@@ -4,31 +4,447 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+<!-- next-header -->
+## [Unreleased] - ReleaseDate
 
-## 4.0.0 - Upcoming
-
-_gated behind `unstable-v4`_
-
-### Features
-
-- *(help)* Show `PossibleValue::help` in long help (`--help`) (#3312)
+## [4.0.8] - 2022-10-01
 
 ### Fixes
 
-- Leading dashes in `Arg::long` are no longer allowed (#3691)
-- Verify `required` is not used with conditional required settings (#3660)
-- Disallow more `value_names` than `number_of_values` (#2695)
+- *(derive)* Remove a low-value assert preventing defaulting `Help` and `Version` actions
+
+## [4.0.7] - 2022-09-30
+
+### Features
+
+- *(derive)* Populate implicit ArgGroup (#3165)
+
+### Fixes
+
+- *(derive)* Support `#[group(skip)]` on `Parser` derive
+- *(derive)* Tell users about implicit arg groups when running into group name conflicts
+- *(error)* Don't report unrelated groups in conflict or requires errors
+
+## [4.0.6] - 2022-09-30
+
+### Features
+
+- *(derive)* Support `#[group(skip)] (#4279, #4301)
+
+## [4.0.5] - 2022-09-30
+
+## [4.0.4] - 2022-09-29
+
+### Fixes
+
+- *(error)* Specialize the self-conflict error to look like clap v3
+
+## [4.0.3] - 2022-09-29
+
+### Fixes
+
+- *(error)* Quote literals consistently
+- *(error)* Stylize escape (`--`) suggestions
+- *(error)* Format help flag as a literal
+
+## [4.0.2] - 2022-09-28
+
+### Fixes
+
+- *(parser)* `SetFalse` should conflict with itself like `SetTrue` and `Set`
+- *(parser)* Allow one-off overrides
+
+## [4.0.1] - 2022-09-28
+
+### Fixes
+
+- *(derive)* Ensure `#[clap(...)]` attribute still works
+
+## [4.0.0] - 2022-09-28
+
+### Highlights
+
+**`Arg::num_args(range)`**
+
+Clap has had several ways for controlling how many values will be captured without always being clear on how they interacted, including
+- `Arg::multiple_values(true)`
+- `Arg::number_of_values(4)`
+- `Arg::min_values(2)`
+- `Arg::max_values(20)`
+- `Arg::takes_value(true)`
+
+These have now all been collapsed into `Arg::num_args` which accepts both
+single values and ranges of values.  `num_args` controls how many raw arguments
+on the command line will be captured as values per occurrence and independent
+of value delimiters.
+
+See [Issue 2688](https://github.com/clap-rs/clap/issues/2688) for more background.
+
+**Polishing Help**
+
+Clap strives to give a polished CLI experience out of the box with little
+ceremony.  With some feedback that has accumulated over time, we took this
+release as an opportunity to re-evaluate our `--help` output to make sure it is
+meeting that goal.
+
+In doing this evaluation, we wanted to keep in mind:
+- Whether other CLIs had ideas that make sense to apply
+- Providing an experience that fits within the rest of applications and works across all shells
+
+Before:
+```
+git
+A fictional versioning CLI
+
+USAGE:
+    git <SUBCOMMAND>
+
+OPTIONS:
+    -h, --help    Print help information
+
+SUBCOMMANDS:
+    add      adds things
+    clone    Clones repos
+    help     Print this message or the help of the given subcommand(s)
+    push     pushes things
+    stash
+```
+
+After:
+```
+A fictional versioning CLI
+
+Usage: git <COMMAND>
+
+Commands:
+  clone  Clones repos
+  push   pushes things
+  add    adds things
+  stash
+  help   Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help  Print help information
+```
+- name/version header was removed because we couldn't justify the space it occupied when
+  - Usage already includes the name
+  - `--version` is available for showing the same thing (if the program has a version set)
+- Usage was dropped to one line to save space
+- Focus is put on the subcommands
+- Headings are now Title case
+- The more general term "command" is used rather than being explicit about being "subcommands"
+- The output is more dense with the expectation that it won't affect legibility but will allow more content
+- We've moved to a more neutral palette for highlighting elements (not highlighted above)
+
+In talking to users, we found some that liked clap's `man`-like experience.
+When deviating from this, we are making the assumption that those are more
+power users and that the majority of users wouldn't look as favorably on being
+consistent with `man`.
+
+See [Issue 4132](https://github.com/clap-rs/clap/issues/4132) for more background.
+
+**More Dynamicism**
+
+Clap's API has focused on `&str` for performance but this can make
+dealing with owned data difficult, like `#[arg(default_value_t)]` generating a
+String from the default value.
+
+Additionally, to avoid `ArgMatches` from borrowing (and for some features we
+decided to forgo), clap took the `&str` argument IDs and hashed them.  This
+prevented us from providing a usable API for iterating over existing arguments.
+
+Now clap has switched to a string newtype that gives us the flexibility to
+decide whether to use `&'static str`, `Cow<'static, str>` for fast dynamic behavior, or
+`Box<str>` for dynamic behavior with small binary size.
+
+As an extension of that work, you can now call `ArgMatches::ids` to iterate
+over the arguments and groups that were found when parsing.  The newtype `Id`
+was used to prevent some classes of bugs and to make it easier to understand
+when opaque Ids are used vs user-visible strings.
+
+**Clearing Out Deprecations**
+
+Instead of doing all development on clap 4.0.0, we implemented a lot of new features during clap 3's development, deprecating the old API while introducing the new API, including:
+- Replacing the implicit behavior for args when parsing them with `ArgAction`
+- Replacing various one-off forms of value validation with the `ValueParser` API
+  - Allowing derives to automatically do the right thing for `PathBuf` (allowing invalid UTF-8)
+- Replacing `AppSettings` and `ArgSettings` enums with getters/setters
+- Clarifying terms and making them more consistent
+
+### Migrating
+
+Steps:
+
+0. [Upgrade to v3](https://github.com/clap-rs/clap/blob/v3-master/CHANGELOG.md#migrating) if you haven't already
+1. Add CLI tests (including example below), `-h` and `--help` output at a minimum (recommendation: [trycmd](https://docs.rs/trycmd/) for snapshot testing)
+2. *If using Builder API*: Explicitly set the `arg.action(ArgAction::...)` on each argument (`StoreValue` for options and `IncOccurrences` for flags)
+3. Run `cargo check --features clap/deprecated` and resolve all deprecation warnings
+4. Upgrade to v4
+5. Update feature flags
+  - *If `default-features = false`*, run `cargo add clap -F help,usage,error-context`
+  -  Run `cargo add clap -F wrap_help` unless you want to hard code line wraps
+6. Resolve compiler errors
+7. Resolve behavior changes (see "subtle changes" under BREAKING CHANGES)
+8. *At your leisure:* resolve new deprecation notices
+
+Example test (derive):
+```rust
+#[derive(clap::Parser)]
+struct Cli {
+    ...
+}
+
+#[test]
+fn verify_cli() {
+    use clap::CommandFactory;
+    Cli::command().debug_assert()
+}
+```
+
+Example test (builder):
+```rust
+fn cli() -> clap::Command {
+    ...
+}
+
+#[test]
+fn verify_cli() {
+    cli().debug_assert();
+}
+```
+
+Note: the idiomatic / recommended way of specifying different types of args in the Builder API has changed:
+
+Before
+```rust
+.arg(Arg::new("flag").long("flag"))  # --flag
+.arg(Arg::new("option").long("option").takes_value(true))  # --option <option>
+```
+After:
+```rust
+.arg(Arg::new("flag").long("flag").action(ArgAction::SetTrue))  # --flag
+.arg(Arg::new("option").long("option"))  # --option <option>
+```
+In particular, `num_args` (the replacement for `takes_value`) will default appropriately
+from the `ArgAction` and generally only needs to be set explicitly for the
+other `num_args` use cases.
+
+### Breaking Changes
+
+Subtle changes (i.e. compiler won't catch):
+
+- `arg!` now sets one of (#3795):
+  - `ArgAction::SetTrue`, requiring `ArgMatches::get_flag` instead of `ArgMatches::is_present`
+  - `ArgAction::Count`, requiring `ArgMatches::get_count` instead of `ArgMatches::occurrences_of`
+  - `ArgAction::Set`, requiring `ArgMatches::get_one` instead of `ArgMatches::value_of`
+  - `ArgAction::Append`, requiring `ArgMatches::get_many` instead of `ArgMatches::values_of`
+- `ArgAction::Set`, `ArgAction::SetTrue`, and `Arg::Action::SetFalse` now
+  conflict by default to be like `ArgAction::StoreValue` and
+  `ArgAction::IncOccurrences`, requiring `cmd.args_override_self(true)` to override instead (#4261)
+- By default, an `Arg`s default action is `ArgAction::Set`, rather than `ArgAction::IncOccurrence` to reduce confusing magic through consistency (#2687, #4032, see also #3977)
+- `mut_arg` can no longer be used to customize help and version arguments, instead disable them (`Command::disable_help_flag`, `Command::disable_version_flag`) and provide your own (#4056)
+- Removed lifetimes from `Command`, `Arg`, `ArgGroup`, and `PossibleValue`, assuming `'static`.  `string` feature flag will enable support for `String`s (#1041, #2150, #4223)
+- `arg!(--flag <value>)` is now optional, instead of required.  Add `.required(true)` at the end to restore the original behavior (#4206)
+- Added default feature flags, `help`, `usage` and `error-context`, requiring adding them back in if `default-features = false` (#4236)
+- *(parser)* Always fill in `""` argument for external subcommands to make it easier to distinguish them from built-in commands (#3263)
+- *(parser)* Short flags now have higher precedence than hyphen values with `Arg::allow_hyphen_values`, to be consistent with `Command::allow_hyphen_values` (#4187)
+- *(parser)* `Arg::value_terminator` must be its own argument on the CLI rather than being in a delimited list (#4025)
+- *(help)* Line wrapping of help is now behind the existing `wrap_help` feature flag, either enable it or hard code your wraps (#4258)
+- *(help)* Make `DeriveDisplayOrder` the default and removed the setting.  To sort help, set `next_display_order(None)` (#2808)
+- *(help)* Subcommand display order respects `Command::next_display_order` instead of `DeriveDisplayOrder` and using its own initial display order value (#2808)
+- *(help)* Subcommands are now listed before arguments.  To get the old behavior, see `Command::help_template` (#4132)
+- *(help)* Help headings are now title cased, making any user-provided help headings inconsistent.  To get the old behavior, see `Command::help_template`, `Arg::help_heading`, and `Command::subcommand_help_heading` (#4132)
+- *(help)* "Command" is used as the section heading for subcommands and `COMMAND` for the value name.  To get the old behavior, see  `Command::subcommand_help_heading` and `Arg::subcommand_value_name` (#4132, #4155)
+- *(help)* Whitespace in help output is now trimmed to ensure consistency regardless of how well a template matches the users needs. (#4132, #4156)
+- *(help)* name/version/author are removed by default from help output.  To get the old behavior, see `Command::help_template`. (#4132, #4160)
+- *(help)* Indentation for second-line usage changed. (#4132, #4188)
+- *(env)* Parse `--help` and `--version` like any `ArgAction::SetTrue` flag (#3776)
+- *(derive)* Leave `Arg::id` as `verbatim` casing, requiring updating of string references to other args like in `conflicts_with` or `requires` (#3282)
+- *(derive)* Doc comments for `ValueEnum` variants will now show up in `--help` (#3312)
+- *(derive)* When deriving `Args`, and `ArgGroup` is created using the type's name, reserving it for future use (#2621, #4209)
+- *(derive)* `next_help_heading` can now leak out of a `#[clap(flatten)]`, like all other command settings (#4222)
+
+Easier to catch changes:
+
+- Looking up a group in `ArgMatches` now returns the arg `Id`s, rather than the values to reduce overhead and offer more flexibility. (#4072)
+- Changed `Arg::number_of_values` (average-across-occurrences) to `Arg::num_args` (per-occurrence) (raw CLI args, not parsed values) (#2688, #4023)
+  - `num_args(0)` no longer implies `takes_value(true).multiple_values(true)` (#4023)
+  - `num_args(1)` no longer implies `multiple_values(true)` (#4023)
+  - Does not check default or env values, only what the user explicitly passes in (#4025)
+  - No longer terminates on delimited values (#4025)
+- Replace `Arg::min_values` (across all occurrences) with `Arg::num_args(N..)` (per occurrence) to reduce confusion over different value count APIs (#4023)
+- Replace `Arg::max_values` (across all occurrences) with `Arg::num_args(1..=M)` (per occurrence) to reduce confusion over different value count APIs  (#4023)
+- Replace `Arg::multiple_values(true)` with `Arg::num_args(1..)` and `Arg::multiple_values(false)` with `Arg::num_args(0)` to reduce confusion over different value count APIs  (#4023)
+- Replace `Arg::takes_value(true)` with `Arg::num_args(1)` and `Arg::takes_value(false)` with `Arg::num_args(0)` to reduce confusion over different value count APIs
+- Remove `Arg::require_value_delimiter`, either users could use `Arg::value_delimiter` or implement a custom parser with `TypedValueParser` as it was mostly to make `multiple_values(true)` act like `multiple_values(false)` and isn't needed anymore (#4026)
+- `Arg::new("help")` and `Arg::new("version")` no longer implicitly disable the
+  built-in flags and be copied to all subcommands, instead disable
+  the built-in flags (`Command::disable_help_flag`,
+  `Command::disable_version_flag`) and mark the custom flags as `global(true)`. (#4056)
+- `Arg::short('h')` no longer implicitly disables the short flag for help,
+  instead disable
+  the built-in flags (`Command::disable_help_flag`,
+  `Command::disable_version_flag`) provide your own `Arg::new("help").long("help").action(ArgAction::Help).global(true)`. (#4056)
+- `ArgAction::SetTrue` and `ArgAction::SetFalse` now prioritize `Arg::default_missing_value` over their standard behavior (#4000)
+- Changed `Arg::requires_ifs` and `Arg::default_value*_ifs*` to taking an `ArgPredicate`, removing ambiguity with `None` when accepting owned and borrowed types (#4084)
+- Removed `PartialEq` and `Eq` from `Command` so we could change external subcommands to use a `ValueParser` (#3990)
+- Various `Arg`, `Command`, and `ArgGroup` calls were switched from accepting `&[]` to `[]` via `IntoIterator` to be more flexible (#4072)
+- `Arg::short_aliases` and other builder functions that took `&[]` need the `&` dropped (#4081)
+- `ErrorKind` and `Result` moved into the `error` module
+- `ErrorKind::EmptyValue` replaced with `ErrorKind::InvalidValue` to remove an unnecessary special case (#3676, #3968)
+- `ErrorKind::UnrecognizedSubcommand` replaced with `ErrorKind::InvalidSubcommand` to remove an unnecessary special case (#3676)
+- Changed the default type of `allow_external_subcommands` from `String` to `OsString` as that is less likely to cause bugs in user applications (#3990)
+- *(help)* `Command::render_usage` now returns a `StyledStr` (#4248)
+- *(derive)* Changed the default for arguments from `parse` to `value_parser`, removing `parse` support (#3827, #3981)
+  - `#[clap(value_parser)]` and `#[clap(action)]` are now redundant
+- *(derive)* `subcommand_required(true).arg_required_else_help(true)` is set instead of `SubcommandRequiredElseHelp` to give more meaningful errors when subcommands are missing and to reduce redundancy (#3280)
+- *(derive)* Remove `arg_enum` attribute in favor of `value_enum` to match the new name (we didn't have support in v3 to mark it deprecated) (#4127)
+- *(parser)* Assert when the CLI looksup an unknown args when external subcommand support is enabled to help catch bugs (#3703)
+- *(assert)* Sometimes `Arg::default_missing_value` didn't require `num_args(0..=N)`, now it does (#4023)
+- *(assert)* Leading dashes in `Arg::long` are no longer allowed (#3691)
+- *(assert)* Disallow more `value_names` than `num_args` (#2695)
 - *(assert)* Always enforce that version is specified when the `ArgAction::Version` is used
 - *(assert)* Add missing `#[track_caller]`s to make it easier to debug asserts
+- *(assert)* Ensure `overrides_with` IDs are valid
+- *(assert)* Ensure no self-`overrides_with` now that Actions replace it
+- *(assert)* Ensure subcommand names are not duplicated
+- *(assert)* Assert on `mut_arg` receiving an invalid arg ID or `mut_subcommand` receiving an invalid command name
+
+### Compatibility
+
+MSRV is now 1.60.0
+
+Deprecated
+- `Arg::use_value_delimiter` in favor of `Arg::value_delimiter` to avoid having multiple ways of doing the same thing
+- `Arg::requires_all` in favor of `Arg::requires_ifs` now that it takes an `ArgPredicate` to avoid having multiple ways of doing the same thing
+- `Arg::number_of_values` in favor of `Arg::num_args` to clarify semantic differences
+- `default_value_os`, `default_values_os`, `default_value_if_os`, and `default_value_ifs_os` as the non `_os` variants now accept either a `str` or an `OsStr` (#4141)
+- `Arg::env_os` in favor of `Arg::env`
+- `Command::dont_collapse_args_in_usage` is now the default (#4151)
+- `Command::trailing_var_arg` in favor of `Arg::trailing_var_arg` to make it clearer which arg it is meant to apply to (#4187)
+- `Command::allow_hyphen_values` in favor of `Arg::allow_hyphen_values` to make it clearer which arg it is meant to apply to (#4187)
+- `Command::allow_negative_numbers` in favor of `Arg::allow_negative_numbers` to make it clearer which arg it is meant to apply to (#4187)
+- *(help)* Deprecated `Command::write_help` and `Command::write_long_help` in favor of `Command::render_help` and `Command::render_long_help` (#4248)
+- *(derive)* `structopt` and `clap` attributes in favor of the more specific `command`, `arg`, and `value` to open the door for [more features](https://github.com/clap-rs/clap/issues/1807) and [clarify relationship to the builder](https://github.com/clap-rs/clap/discussions/4090) (#1807, #4180)
+- *(derive)* `#[clap(value_parser)]` and `#[clap(action)]` defaulted attributes (its the default) (#3976)
+
+Behavior Changes
+- *(help)* With `wrap_help` feature, if the terminal size cannot be determined, `LINES` and `COLUMNS` variables are used (#4186)
+
+### Features
+
+- `Arg::num_args` now accepts ranges, allowing setting both the minimum and maximum number of values per occurrence (#2688, #4023)
+- Allow non-bool `value_parser`s for `ArgAction::SetTrue` / `ArgAction::SetFalse` (#4092)
+- Add `From<&OsStr>`, `From<OsString>`, `From<&str>`, and `From<String>` to `value_parser!` (#4257)
+- Allow resetting most builder methods
+- Can now pass runtime generated data to `Command`, `Arg`, `ArgGroup`, `PossibleValue`, etc without managing lifetimes with the `string` feature flag (#2150, #4223)
+- New default `error-context`, `help` and `usage` feature flags that can be turned off for smaller binaries (#4236)
+- Added `StyledStr::ansi()` to `Display` with ANSI escape codes (#4248)
+- *(error)* `Error::apply` for changing the formatter for dropping binary size (#4111)
+- *(error)* `Error::render`for formatting the error into a `StyledStr`
+- *(help)* Show `PossibleValue::help` in long help (`--help`) (#3312)
+- *(help)* New `{tab}` variable for `Command::help_template` (#4161)
+- *(help)* `Command::render_help` and `Command::render_long_help` for formatting the error into a `StyledStr` (#3873, #4248)
+- *(help)* `Command::render_usage` now returns a `StyledStr` (#4248)
+
+### Fixes
+
+- Verify `required` is not used with conditional required settings (#3660)
+- Replaced `cmd.allow_invalid_for_utf8_external_subcommands` with `cmd.external_subcommand_value_parser` (#3733)
+- `Arg::default_missing_value` now applies per occurrence rather than if a value is missing across all occurrences (#3998)
+- `arg!(--long [value])` to accept `0..=1` per occurrence rather than across all occurrences, making it safe to use with `ArgAction::Append` (#4001)
+- Allow `OsStr`s for `Arg::{required_if_eq,required_if_eq_any,required_if_eq_all}` (#4084)
+- *(help)* With `wrap_help` feature, if the terminal size cannot be determined, `LINES` and `COLUMNS` variables are used (#4186)
 - *(help)* Use `Command::display_name` in the help title rather than `Command::bin_name`
-- *(parser)* Assert on unknown args when using external subcommands (#3703)
+- *(help)* Show when a flag is `ArgAction::Count` by adding an `...` (#4003)
+- *(help)* Use a more neutral palette for coloring (#4132, #4117)
+- *(help)* Don't rely on ALL CAPS for help headers (#4132, #4123)
+- *(help)* List subcommands first, focusing the emphasis on them (#4132, #4125)
+- *(help)* Do not include global args in `cmd help help` (#4131)
+- *(help)* Use `[positional]` in list when relevant (#4144)
+- *(help)* Show all `[positional]` in usage (#4151)
+- *(help)* Polish up subcommands by referring to them as commands (#4132, #4155)
+- *(help)* Trim extra whitespace to avoid artifacts from different uses of templates (#4132, #4156)
+- *(help)* Hint to the user the difference between `-h` / `--help` when applicable (#4132, #4159)
+- *(help)* Shorten help by eliding name/version/author (#4132, #4160)
+- *(help)* When short help is long enough to activate `next_line_help`, don't add blank lines (#4132, #4190)
+- *(help)* Make help output more dense (reducing horizontal whitespace) (#4132, #4192)
+- *(help)* Separate subcommand flags with "," like option flags (#4232, #4235)
+- *(help)* Quote the suggested help flag (#4220)
+- *(version)* Use `Command::display_name` rather than `Command::bin_name` (#3966)
 - *(parser)* Always fill in `""` argument for external subcommands (#3263)
+- *(parser)* Short flags now have higher precedence than hyphen values with `Arg::allow_hyphen_values`, like `Command::allow_hyphen_values` (#4187)
+- *(parser)* Prefer `InvalidSubcommand` over `UnknownArgument` in more cases (#4219)
 - *(derive)* Detect escaped external subcommands that look like built-in subcommands (#3703)
 - *(derive)* Leave `Arg::id` as `verbatim` casing (#3282)
 - *(derive)* Default to `#[clap(value_parser, action)]` instead of `#[clap(parse)]` (#3827)
 
-<!-- next-header -->
-## [Unreleased] - ReleaseDate
+## [3.2.18] - 2022-08-29
+
+### Fixes
+
+- *(help)* `Command::print_help` now respects `Command::colored_help`
+- *(derive)* Improved error messages
+
+## [3.2.17] - 2022-08-12
+
+### Fixes
+
+- *(derive)* Expose `#[clap(id = ...)]` attribute to match Arg's latest API
+
+## [3.2.16] - 2022-07-30
+
+### Fixes
+
+- Ensure required arguments appear in errors when they are also members of a group (#4004)
+
+## [3.2.15] - 2022-07-25
+
+### Features
+
+- *(derive)* New `default_values_t` and `default_values_os_t` attributes
+
+## [3.2.14] - 2022-07-21
+
+### Fixes
+
+- A `multiple_values` positional followed by another positional now works with multiple flags
+
+## [3.2.13] - 2022-07-19
+
+### Documentation
+
+- Pulled in tutorials, cookbook, and derive reference into rustdoc
+
+## [3.2.12] - 2022-07-14
+
+### Fixes
+
+- Allow an arg to declare a conflict with a group
+
+## [3.2.11] - 2022-07-13
+
+### Features
+
+- Added `Arg::get_all_short_aliaes` and `Arg::get_all_aliases`
+
+## [3.2.10] - 2022-07-12
+
+### Fixes
+
+- Loosen lifetime on `Command::mut_subcommand`
+
+## [3.2.8] - 2022-06-30
+
+### Features
+
+- Added `Command::mut_subcommand` to mirror `Command::mut_arg`
+
+## [3.2.7] - 2022-06-28
+
+### Fixes
+
+- Global arguments should override env-sourced arguments
 
 ## [3.2.6] - 2022-06-21
 
@@ -3489,7 +3905,27 @@ Minimum version of Rust is now v1.13.0 (Stable)
 * **arg**  allow lifetimes other than 'static in arguments ([9e8c1fb9](https://github.com/clap-rs/clap/commit/9e8c1fb9406f8448873ca58bab07fe905f1551e5))
 
 <!-- next-url -->
-[Unreleased]: https://github.com/clap-rs/clap/compare/v3.2.6...HEAD
+[Unreleased]: https://github.com/clap-rs/clap/compare/v4.0.8...HEAD
+[4.0.8]: https://github.com/clap-rs/clap/compare/v4.0.7...v4.0.8
+[4.0.7]: https://github.com/clap-rs/clap/compare/v4.0.6...v4.0.7
+[4.0.6]: https://github.com/clap-rs/clap/compare/v4.0.5...v4.0.6
+[4.0.5]: https://github.com/clap-rs/clap/compare/v4.0.4...v4.0.5
+[4.0.4]: https://github.com/clap-rs/clap/compare/v4.0.3...v4.0.4
+[4.0.3]: https://github.com/clap-rs/clap/compare/v4.0.2...v4.0.3
+[4.0.2]: https://github.com/clap-rs/clap/compare/v4.0.1...v4.0.2
+[4.0.1]: https://github.com/clap-rs/clap/compare/v4.0.0...v4.0.1
+[4.0.0]: https://github.com/clap-rs/clap/compare/v3.2.18...v4.0.0
+[3.2.18]: https://github.com/clap-rs/clap/compare/v3.2.17...v3.2.18
+[3.2.17]: https://github.com/clap-rs/clap/compare/v3.2.16...v3.2.17
+[3.2.16]: https://github.com/clap-rs/clap/compare/v3.2.15...v3.2.16
+[3.2.15]: https://github.com/clap-rs/clap/compare/v3.2.14...v3.2.15
+[3.2.14]: https://github.com/clap-rs/clap/compare/v3.2.13...v3.2.14
+[3.2.13]: https://github.com/clap-rs/clap/compare/v3.2.12...v3.2.13
+[3.2.12]: https://github.com/clap-rs/clap/compare/v3.2.11...v3.2.12
+[3.2.11]: https://github.com/clap-rs/clap/compare/v3.2.10...v3.2.11
+[3.2.10]: https://github.com/clap-rs/clap/compare/v3.2.8...v3.2.10
+[3.2.8]: https://github.com/clap-rs/clap/compare/v3.2.7...v3.2.8
+[3.2.7]: https://github.com/clap-rs/clap/compare/v3.2.6...v3.2.7
 [3.2.6]: https://github.com/clap-rs/clap/compare/v3.2.5...v3.2.6
 [3.2.5]: https://github.com/clap-rs/clap/compare/v3.2.4...v3.2.5
 [3.2.4]: https://github.com/clap-rs/clap/compare/v3.2.3...v3.2.4

@@ -1,11 +1,12 @@
-use super::utils;
+use clap::{error::ErrorKind, Arg, ArgAction, Command};
 
-use clap::{error::ErrorKind, Arg, Command};
+#[cfg(feature = "error-context")]
+use super::utils;
 
 #[test]
 fn empty_values() {
     let m = Command::new("config")
-        .arg(Arg::new("config").long("config").takes_value(true))
+        .arg(Arg::new("config").long("config").action(ArgAction::Set))
         .try_get_matches_from(&["config", "--config", ""])
         .unwrap();
     assert_eq!(m.get_one::<String>("config").map(|v| v.as_str()), Some(""));
@@ -14,13 +15,13 @@ fn empty_values() {
 #[test]
 fn empty_values_with_equals() {
     let m = Command::new("config")
-        .arg(Arg::new("config").long("config").takes_value(true))
+        .arg(Arg::new("config").long("config").action(ArgAction::Set))
         .try_get_matches_from(&["config", "--config="])
         .unwrap();
     assert_eq!(m.get_one::<String>("config").map(|v| v.as_str()), Some(""));
 
     let m = Command::new("config")
-        .arg(Arg::new("config").short('c').takes_value(true))
+        .arg(Arg::new("config").short('c').action(ArgAction::Set))
         .try_get_matches_from(&["config", "-c="])
         .unwrap();
     assert_eq!(m.get_one::<String>("config").map(|v| v.as_str()), Some(""))
@@ -32,23 +33,23 @@ fn no_empty_values() {
         .arg(
             Arg::new("config")
                 .long("config")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_parser(clap::builder::NonEmptyStringValueParser::new()),
         )
         .try_get_matches_from(&["config", "--config", ""]);
     assert!(m.is_err());
-    assert_eq!(m.unwrap_err().kind(), ErrorKind::EmptyValue);
+    assert_eq!(m.unwrap_err().kind(), ErrorKind::InvalidValue);
 
     let m = Command::new("config")
         .arg(
             Arg::new("config")
                 .short('c')
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_parser(clap::builder::NonEmptyStringValueParser::new()),
         )
         .try_get_matches_from(&["config", "-c", ""]);
     assert!(m.is_err());
-    assert_eq!(m.unwrap_err().kind(), ErrorKind::EmptyValue)
+    assert_eq!(m.unwrap_err().kind(), ErrorKind::InvalidValue)
 }
 
 #[test]
@@ -57,23 +58,23 @@ fn no_empty_values_with_equals() {
         .arg(
             Arg::new("config")
                 .long("config")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_parser(clap::builder::NonEmptyStringValueParser::new()),
         )
         .try_get_matches_from(&["config", "--config="]);
     assert!(m.is_err());
-    assert_eq!(m.unwrap_err().kind(), ErrorKind::EmptyValue);
+    assert_eq!(m.unwrap_err().kind(), ErrorKind::InvalidValue);
 
     let m = Command::new("config")
         .arg(
             Arg::new("config")
                 .short('c')
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_parser(clap::builder::NonEmptyStringValueParser::new()),
         )
         .try_get_matches_from(&["config", "-c="]);
     assert!(m.is_err());
-    assert_eq!(m.unwrap_err().kind(), ErrorKind::EmptyValue);
+    assert_eq!(m.unwrap_err().kind(), ErrorKind::InvalidValue);
 }
 
 #[test]
@@ -82,31 +83,32 @@ fn no_empty_values_without_equals() {
         .arg(
             Arg::new("config")
                 .long("config")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_parser(clap::builder::NonEmptyStringValueParser::new()),
         )
         .try_get_matches_from(&["config", "--config"]);
     assert!(m.is_err());
-    assert_eq!(m.unwrap_err().kind(), ErrorKind::EmptyValue);
+    assert_eq!(m.unwrap_err().kind(), ErrorKind::InvalidValue);
 
     let m = Command::new("config")
         .arg(
             Arg::new("config")
                 .short('c')
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_parser(clap::builder::NonEmptyStringValueParser::new()),
         )
         .try_get_matches_from(&["config", "-c"]);
     assert!(m.is_err());
-    assert_eq!(m.unwrap_err().kind(), ErrorKind::EmptyValue)
+    assert_eq!(m.unwrap_err().kind(), ErrorKind::InvalidValue)
 }
 
 #[test]
+#[cfg(feature = "error-context")]
 fn no_empty_values_without_equals_but_requires_equals() {
     let cmd = Command::new("config").arg(
         Arg::new("config")
             .long("config")
-            .takes_value(true)
+            .action(ArgAction::Set)
             .value_parser(clap::builder::NonEmptyStringValueParser::new())
             .require_equals(true),
     );
@@ -118,10 +120,9 @@ fn no_empty_values_without_equals_but_requires_equals() {
     static NO_EUQALS_ERROR: &str =
         "error: Equal sign is needed when assigning values to '--config=<config>'.
 
-USAGE:
-    config [OPTIONS]
+Usage: config [OPTIONS]
 
-For more information try --help
+For more information try '--help'
 ";
 
     utils::assert_output(cmd, "config --config", NO_EUQALS_ERROR, true);

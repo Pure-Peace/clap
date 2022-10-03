@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.2.2] - 2022-09-29
+
+### Fixes
+
+- Reference to subcommand man pages now lists the correct name
+
+## [0.2.1] - 2022-09-28
+
+### Fixes
+
+- Respect hide attributes in more cases
+
+## [0.2.0] - 2022-09-28
+
+## [0.1.10] - 2022-06-28
+
 ## [0.1.9] - 2022-06-21
 
 ## [0.1.8] - 2022-06-13
@@ -38,7 +54,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Expanded the documentation
 
 <!-- next-url -->
-[Unreleased]: https://github.com/clap-rs/clap/compare/clap_mangen-v0.1.9...HEAD
+[Unreleased]: https://github.com/clap-rs/clap/compare/clap_mangen-v0.2.2...HEAD
+[0.2.2]: https://github.com/clap-rs/clap/compare/clap_mangen-v0.2.1...clap_mangen-v0.2.2
+[0.2.1]: https://github.com/clap-rs/clap/compare/clap_mangen-v0.2.0...clap_mangen-v0.2.1
+[0.2.0]: https://github.com/clap-rs/clap/compare/clap_mangen-v0.1.10...clap_mangen-v0.2.0
+[0.1.10]: https://github.com/clap-rs/clap/compare/clap_mangen-v0.1.9...clap_mangen-v0.1.10
 [0.1.9]: https://github.com/clap-rs/clap/compare/clap_mangen-v0.1.8...clap_mangen-v0.1.9
 [0.1.8]: https://github.com/clap-rs/clap/compare/clap_mangen-v0.1.7...clap_mangen-v0.1.8
 [0.1.7]: https://github.com/clap-rs/clap/compare/clap_mangen-v0.1.6...clap_mangen-v0.1.7

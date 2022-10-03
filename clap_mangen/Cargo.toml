@@ -1,6 +1,6 @@
 [package]
 name = "clap_mangen"
-version = "0.1.9"
+version = "0.2.2"
 description = "A manpage generator for clap"
 repository = "https://github.com/clap-rs/clap/tree/master/clap_mangen"
 categories = ["command-line-interface"]
@@ -12,7 +12,7 @@ keywords = [
 ]
 license = "MIT OR Apache-2.0"
 edition = "2021"
-rust-version = "1.56.1"  # MSRV
+rust-version = "1.60.0"  # MSRV
 include = [
   "build.rs",
   "src/**/*",
@@ -41,11 +41,11 @@ bench = false
 
 [dependencies]
 roff = "0.2.1"
-clap = { path = "../", version = "3.2.1", default-features = false, features = ["std", "env"] }
+clap = { path = "../", version = "4.0.0-alpha.0", default-features = false, features = ["std", "env"] }
 
 [dev-dependencies]
-snapbox = { version = "0.2", features = ["diff"] }
-clap = { path = "../", version = "3.2.1", default-features = false, features = ["std"] }
+snapbox = { version = "0.4", features = ["diff"] }
+clap = { path = "../", version = "4.0.0-alpha.0", default-features = false, features = ["std", "help"] }
 
 [features]
 default = []

@@ -8,30 +8,51 @@ _my-app() {
 
     for i in ${COMP_WORDS[@]}
     do
-        case "${i}" in
-            "$1")
+        case "${cmd},${i}" in
+            ",$1")
                 cmd="my__app"
                 ;;
-            cmd-backslash)
-                cmd+="__cmd__backslash"
+            my__app,cmd-backslash)
+                cmd="my__app__cmd__backslash"
                 ;;
-            cmd-backticks)
-                cmd+="__cmd__backticks"
+            my__app,cmd-backticks)
+                cmd="my__app__cmd__backticks"
                 ;;
-            cmd-brackets)
-                cmd+="__cmd__brackets"
+            my__app,cmd-brackets)
+                cmd="my__app__cmd__brackets"
                 ;;
-            cmd-double-quotes)
-                cmd+="__cmd__double__quotes"
+            my__app,cmd-double-quotes)
+                cmd="my__app__cmd__double__quotes"
                 ;;
-            cmd-expansions)
-                cmd+="__cmd__expansions"
+            my__app,cmd-expansions)
+                cmd="my__app__cmd__expansions"
                 ;;
-            cmd-single-quotes)
-                cmd+="__cmd__single__quotes"
+            my__app,cmd-single-quotes)
+                cmd="my__app__cmd__single__quotes"
                 ;;
-            help)
-                cmd+="__help"
+            my__app,help)
+                cmd="my__app__help"
+                ;;
+            my__app__help,cmd-backslash)
+                cmd="my__app__help__cmd__backslash"
+                ;;
+            my__app__help,cmd-backticks)
+                cmd="my__app__help__cmd__backticks"
+                ;;
+            my__app__help,cmd-brackets)
+                cmd="my__app__help__cmd__brackets"
+                ;;
+            my__app__help,cmd-double-quotes)
+                cmd="my__app__help__cmd__double__quotes"
+                ;;
+            my__app__help,cmd-expansions)
+                cmd="my__app__help__cmd__expansions"
+                ;;
+            my__app__help,cmd-single-quotes)
+                cmd="my__app__help__cmd__single__quotes"
+                ;;
+            my__app__help,help)
+                cmd="my__app__help__help"
                 ;;
             *)
                 ;;
@@ -40,7 +61,7 @@ _my-app() {
 
     case "${cmd}" in
         my__app)
-            opts="-h -V --help --version --single-quotes --double-quotes --backticks --backslash --brackets --expansions cmd-single-quotes cmd-double-quotes cmd-backticks cmd-backslash cmd-brackets cmd-expansions help"
+            opts="-h -V --single-quotes --double-quotes --backticks --backslash --brackets --expansions --help --version cmd-single-quotes cmd-double-quotes cmd-backticks cmd-backslash cmd-brackets cmd-expansions help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -138,8 +159,106 @@ _my-app() {
             return 0
             ;;
         my__app__help)
-            opts="<SUBCOMMAND>..."
+            opts="cmd-single-quotes cmd-double-quotes cmd-backticks cmd-backslash cmd-brackets cmd-expansions help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        my__app__help__cmd__backslash)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        my__app__help__cmd__backticks)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        my__app__help__cmd__brackets)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        my__app__help__cmd__double__quotes)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        my__app__help__cmd__expansions)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        my__app__help__cmd__single__quotes)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        my__app__help__help)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi

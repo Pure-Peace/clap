@@ -1,38 +1,7 @@
+use clap::{builder::PossibleValue, error::ErrorKind, Arg, ArgAction, Command};
+
+#[cfg(feature = "error-context")]
 use super::utils;
-
-use clap::{error::ErrorKind, Arg, ArgAction, Command, PossibleValue};
-
-#[cfg(feature = "suggestions")]
-static PV_ERROR: &str = "error: \"slo\" isn't a valid value for '-O <option>'
-\t[possible values: slow, fast, \"ludicrous speed\"]
-
-\tDid you mean \"slow\"?
-
-For more information try --help
-";
-
-#[cfg(not(feature = "suggestions"))]
-static PV_ERROR: &str = "error: \"slo\" isn't a valid value for '-O <option>'
-\t[possible values: slow, fast, \"ludicrous speed\"]
-
-For more information try --help
-";
-
-#[cfg(feature = "suggestions")]
-static PV_ERROR_ESCAPED: &str = "error: \"ludicrous\" isn't a valid value for '-O <option>'
-\t[possible values: slow, fast, \"ludicrous speed\"]
-
-\tDid you mean \"ludicrous speed\"?
-
-For more information try --help
-";
-
-#[cfg(not(feature = "suggestions"))]
-static PV_ERROR_ESCAPED: &str = "error: \"ludicrous\" isn't a valid value for '-O <option>'
-\t[possible values: slow, fast, \"ludicrous speed\"]
-
-For more information try --help
-";
 
 #[test]
 fn possible_values_of_positional() {
@@ -88,9 +57,9 @@ fn possible_values_of_positional_multiple() {
         .arg(
             Arg::new("positional")
                 .index(1)
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_parser(["test123", "test321"])
-                .multiple_values(true),
+                .num_args(1..),
         )
         .try_get_matches_from(vec!["myprog", "test123", "test321"]);
 
@@ -113,9 +82,9 @@ fn possible_values_of_positional_multiple_fail() {
         .arg(
             Arg::new("positional")
                 .index(1)
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_parser(["test123", "test321"])
-                .multiple_values(true),
+                .num_args(1..),
         )
         .try_get_matches_from(vec!["myprog", "test123", "notest"]);
 
@@ -130,7 +99,7 @@ fn possible_values_of_option() {
             Arg::new("option")
                 .short('o')
                 .long("option")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_parser(["test123"]),
         )
         .try_get_matches_from(vec!["myprog", "--option", "test123"]);
@@ -152,7 +121,7 @@ fn possible_values_of_option_fail() {
             Arg::new("option")
                 .short('o')
                 .long("option")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_parser(["test123"]),
         )
         .try_get_matches_from(vec!["myprog", "--option", "notest"]);
@@ -168,7 +137,7 @@ fn possible_values_of_option_multiple() {
             Arg::new("option")
                 .short('o')
                 .long("option")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_parser(["test123", "test321"])
                 .action(ArgAction::Append),
         )
@@ -194,7 +163,7 @@ fn possible_values_of_option_multiple_fail() {
             Arg::new("option")
                 .short('o')
                 .long("option")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_parser(["test123", "test321"])
                 .action(ArgAction::Append),
         )
@@ -205,12 +174,31 @@ fn possible_values_of_option_multiple_fail() {
 }
 
 #[test]
+#[cfg(feature = "error-context")]
 fn possible_values_output() {
+    #[cfg(feature = "suggestions")]
+    static PV_ERROR: &str = "\
+error: \"slo\" isn't a valid value for '-O <option>'
+  [possible values: slow, fast, \"ludicrous speed\"]
+
+  Did you mean \"slow\"?
+
+For more information try '--help'
+";
+
+    #[cfg(not(feature = "suggestions"))]
+    static PV_ERROR: &str = "\
+error: \"slo\" isn't a valid value for '-O <option>'
+  [possible values: slow, fast, \"ludicrous speed\"]
+
+For more information try '--help'
+";
+
     utils::assert_output(
         Command::new("test").arg(
             Arg::new("option")
                 .short('O')
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_parser(["slow", "fast", "ludicrous speed"]),
         ),
         "clap-test -O slo",
@@ -220,12 +208,31 @@ fn possible_values_output() {
 }
 
 #[test]
+#[cfg(feature = "error-context")]
 fn possible_values_alias_output() {
+    #[cfg(feature = "suggestions")]
+    static PV_ERROR: &str = "\
+error: \"slo\" isn't a valid value for '-O <option>'
+  [possible values: slow, fast, \"ludicrous speed\"]
+
+  Did you mean \"slow\"?
+
+For more information try '--help'
+";
+
+    #[cfg(not(feature = "suggestions"))]
+    static PV_ERROR: &str = "\
+error: \"slo\" isn't a valid value for '-O <option>'
+  [possible values: slow, fast, \"ludicrous speed\"]
+
+For more information try '--help'
+";
+
     utils::assert_output(
         Command::new("test").arg(
             Arg::new("option")
                 .short('O')
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_parser([
                     "slow".into(),
                     PossibleValue::new("fast").alias("fost"),
@@ -239,12 +246,31 @@ fn possible_values_alias_output() {
 }
 
 #[test]
+#[cfg(feature = "error-context")]
 fn possible_values_hidden_output() {
+    #[cfg(feature = "suggestions")]
+    static PV_ERROR: &str = "\
+error: \"slo\" isn't a valid value for '-O <option>'
+  [possible values: slow, fast, \"ludicrous speed\"]
+
+  Did you mean \"slow\"?
+
+For more information try '--help'
+";
+
+    #[cfg(not(feature = "suggestions"))]
+    static PV_ERROR: &str = "\
+error: \"slo\" isn't a valid value for '-O <option>'
+  [possible values: slow, fast, \"ludicrous speed\"]
+
+For more information try '--help'
+";
+
     utils::assert_output(
         Command::new("test").arg(
             Arg::new("option")
                 .short('O')
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_parser([
                     "slow".into(),
                     "fast".into(),
@@ -259,12 +285,31 @@ fn possible_values_hidden_output() {
 }
 
 #[test]
+#[cfg(feature = "error-context")]
 fn escaped_possible_values_output() {
+    #[cfg(feature = "suggestions")]
+    static PV_ERROR_ESCAPED: &str = "\
+error: \"ludicrous\" isn't a valid value for '-O <option>'
+  [possible values: slow, fast, \"ludicrous speed\"]
+
+  Did you mean \"ludicrous speed\"?
+
+For more information try '--help'
+";
+
+    #[cfg(not(feature = "suggestions"))]
+    static PV_ERROR_ESCAPED: &str = "\
+error: \"ludicrous\" isn't a valid value for '-O <option>'
+  [possible values: slow, fast, \"ludicrous speed\"]
+
+For more information try '--help'
+";
+
     utils::assert_output(
         Command::new("test").arg(
             Arg::new("option")
                 .short('O')
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_parser(["slow", "fast", "ludicrous speed"]),
         ),
         "clap-test -O ludicrous",
@@ -274,12 +319,20 @@ fn escaped_possible_values_output() {
 }
 
 #[test]
+#[cfg(feature = "error-context")]
 fn missing_possible_value_error() {
+    static MISSING_PV_ERROR: &str = "\
+error: The argument '-O <option>' requires a value but none was supplied
+  [possible values: slow, fast, \"ludicrous speed\"]
+
+For more information try '--help'
+";
+
     utils::assert_output(
         Command::new("test").arg(
             Arg::new("option")
                 .short('O')
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_parser([
                     "slow".into(),
                     PossibleValue::new("fast").alias("fost"),
@@ -293,13 +346,6 @@ fn missing_possible_value_error() {
     );
 }
 
-static MISSING_PV_ERROR: &str =
-    "error: The argument '-O <option>' requires a value but none was supplied
-\t[possible values: slow, fast, \"ludicrous speed\"]
-
-For more information try --help
-";
-
 #[test]
 fn alias() {
     let m = Command::new("pv")
@@ -307,7 +353,7 @@ fn alias() {
             Arg::new("option")
                 .short('o')
                 .long("option")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_parser([PossibleValue::new("test123").alias("123"), "test321".into()])
                 .ignore_case(true),
         )
@@ -329,7 +375,7 @@ fn aliases() {
             Arg::new("option")
                 .short('o')
                 .long("option")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_parser([
                     PossibleValue::new("test123").aliases(["1", "2", "3"]),
                     "test321".into(),
@@ -354,7 +400,7 @@ fn ignore_case() {
             Arg::new("option")
                 .short('o')
                 .long("option")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_parser(["test123", "test321"])
                 .ignore_case(true),
         )
@@ -376,7 +422,7 @@ fn ignore_case_fail() {
             Arg::new("option")
                 .short('o')
                 .long("option")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_parser(["test123", "test321"]),
         )
         .try_get_matches_from(vec!["pv", "--option", "TeSt123"]);
@@ -392,9 +438,9 @@ fn ignore_case_multiple() {
             Arg::new("option")
                 .short('o')
                 .long("option")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_parser(["test123", "test321"])
-                .multiple_values(true)
+                .num_args(1..)
                 .ignore_case(true),
         )
         .try_get_matches_from(vec!["pv", "--option", "TeSt123", "teST123", "tESt321"]);
@@ -417,9 +463,9 @@ fn ignore_case_multiple_fail() {
             Arg::new("option")
                 .short('o')
                 .long("option")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .value_parser(["test123", "test321"])
-                .multiple_values(true),
+                .num_args(1..),
         )
         .try_get_matches_from(vec!["pv", "--option", "test123", "teST123", "test321"]);
 

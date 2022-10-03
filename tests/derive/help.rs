@@ -1,77 +1,57 @@
-use clap::{AppSettings, Args, CommandFactory, Parser, Subcommand};
+use clap::{ArgAction, Args, CommandFactory, Parser, Subcommand};
 
 #[test]
 fn arg_help_heading_applied() {
     #[derive(Debug, Clone, Parser)]
     struct CliOptions {
-        #[clap(long, value_parser)]
-        #[clap(help_heading = Some("HEADING A"))]
+        #[arg(long)]
+        #[arg(help_heading = Some("HEADING A"))]
         should_be_in_section_a: u32,
 
-        #[clap(long, value_parser)]
+        #[arg(long)]
         no_section: u32,
     }
 
     let cmd = CliOptions::command();
 
-    let should_be_in_section_a = if cfg!(feature = "unstable-v4") {
-        cmd.get_arguments()
-            .find(|a| a.get_id() == "should_be_in_section_a")
-            .unwrap()
-    } else {
-        cmd.get_arguments()
-            .find(|a| a.get_id() == "should-be-in-section-a")
-            .unwrap()
-    };
+    let should_be_in_section_a = cmd
+        .get_arguments()
+        .find(|a| a.get_id() == "should_be_in_section_a")
+        .unwrap();
     assert_eq!(should_be_in_section_a.get_help_heading(), Some("HEADING A"));
 
-    let should_be_in_section_b = if cfg!(feature = "unstable-v4") {
-        cmd.get_arguments()
-            .find(|a| a.get_id() == "no_section")
-            .unwrap()
-    } else {
-        cmd.get_arguments()
-            .find(|a| a.get_id() == "no-section")
-            .unwrap()
-    };
+    let should_be_in_section_b = cmd
+        .get_arguments()
+        .find(|a| a.get_id() == "no_section")
+        .unwrap();
     assert_eq!(should_be_in_section_b.get_help_heading(), None);
 }
 
 #[test]
 fn app_help_heading_applied() {
     #[derive(Debug, Clone, Parser)]
-    #[clap(next_help_heading = "DEFAULT")]
+    #[command(next_help_heading = "DEFAULT")]
     struct CliOptions {
-        #[clap(long, value_parser)]
-        #[clap(help_heading = Some("HEADING A"))]
+        #[arg(long)]
+        #[arg(help_heading = Some("HEADING A"))]
         should_be_in_section_a: u32,
 
-        #[clap(long, value_parser)]
+        #[arg(long)]
         should_be_in_default_section: u32,
     }
 
     let cmd = CliOptions::command();
 
-    let should_be_in_section_a = if cfg!(feature = "unstable-v4") {
-        cmd.get_arguments()
-            .find(|a| a.get_id() == "should_be_in_section_a")
-            .unwrap()
-    } else {
-        cmd.get_arguments()
-            .find(|a| a.get_id() == "should-be-in-section-a")
-            .unwrap()
-    };
+    let should_be_in_section_a = cmd
+        .get_arguments()
+        .find(|a| a.get_id() == "should_be_in_section_a")
+        .unwrap();
     assert_eq!(should_be_in_section_a.get_help_heading(), Some("HEADING A"));
 
-    let should_be_in_default_section = if cfg!(feature = "unstable-v4") {
-        cmd.get_arguments()
-            .find(|a| a.get_id() == "should_be_in_default_section")
-            .unwrap()
-    } else {
-        cmd.get_arguments()
-            .find(|a| a.get_id() == "should-be-in-default-section")
-            .unwrap()
-    };
+    let should_be_in_default_section = cmd
+        .get_arguments()
+        .find(|a| a.get_id() == "should_be_in_default_section")
+        .unwrap();
     assert_eq!(
         should_be_in_default_section.get_help_heading(),
         Some("DEFAULT")
@@ -85,144 +65,101 @@ fn app_help_heading_flattened() {
 
     #[derive(Debug, Clone, Parser)]
     struct CliOptions {
-        #[clap(flatten)]
+        #[command(flatten)]
         options_a: OptionsA,
 
-        #[clap(flatten)]
+        #[command(flatten)]
         options_b: OptionsB,
 
-        #[clap(subcommand)]
+        #[command(subcommand)]
         sub_a: SubA,
 
-        #[clap(long, value_parser)]
+        #[arg(long)]
         should_be_in_default_section: u32,
     }
 
     #[derive(Debug, Clone, Args)]
-    #[clap(next_help_heading = "HEADING A")]
+    #[command(next_help_heading = "HEADING A")]
     struct OptionsA {
-        #[clap(long, value_parser)]
+        #[arg(long)]
         should_be_in_section_a: u32,
     }
 
     #[derive(Debug, Clone, Args)]
-    #[clap(next_help_heading = "HEADING B")]
+    #[command(next_help_heading = "HEADING B")]
     struct OptionsB {
-        #[clap(long, value_parser)]
+        #[arg(long)]
         should_be_in_section_b: u32,
     }
 
     #[derive(Debug, Clone, Subcommand)]
     enum SubA {
-        #[clap(flatten)]
+        #[command(flatten)]
         SubB(SubB),
-        #[clap(subcommand)]
+        #[command(subcommand)]
         SubC(SubC),
         SubAOne,
-        #[clap(next_help_heading = "SUB A")]
+        #[command(next_help_heading = "SUB A")]
         SubATwo {
-            #[clap(value_parser)]
             should_be_in_sub_a: u32,
         },
     }
 
     #[derive(Debug, Clone, Subcommand)]
     enum SubB {
-        #[clap(next_help_heading = "SUB B")]
-        SubBOne {
-            #[clap(value_parser)]
-            should_be_in_sub_b: u32,
-        },
+        #[command(next_help_heading = "SUB B")]
+        SubBOne { should_be_in_sub_b: u32 },
     }
 
     #[derive(Debug, Clone, Subcommand)]
     enum SubC {
-        #[clap(next_help_heading = "SUB C")]
-        SubCOne {
-            #[clap(value_parser)]
-            should_be_in_sub_c: u32,
-        },
+        #[command(next_help_heading = "SUB C")]
+        SubCOne { should_be_in_sub_c: u32 },
     }
 
     let cmd = CliOptions::command();
 
-    let should_be_in_section_a = if cfg!(feature = "unstable-v4") {
-        cmd.get_arguments()
-            .find(|a| a.get_id() == "should_be_in_section_a")
-            .unwrap()
-    } else {
-        cmd.get_arguments()
-            .find(|a| a.get_id() == "should-be-in-section-a")
-            .unwrap()
-    };
+    let should_be_in_section_a = cmd
+        .get_arguments()
+        .find(|a| a.get_id() == "should_be_in_section_a")
+        .unwrap();
     assert_eq!(should_be_in_section_a.get_help_heading(), Some("HEADING A"));
 
-    let should_be_in_section_b = if cfg!(feature = "unstable-v4") {
-        cmd.get_arguments()
-            .find(|a| a.get_id() == "should_be_in_section_b")
-            .unwrap()
-    } else {
-        cmd.get_arguments()
-            .find(|a| a.get_id() == "should-be-in-section-b")
-            .unwrap()
-    };
+    let should_be_in_section_b = cmd
+        .get_arguments()
+        .find(|a| a.get_id() == "should_be_in_section_b")
+        .unwrap();
     assert_eq!(should_be_in_section_b.get_help_heading(), Some("HEADING B"));
 
-    let should_be_in_default_section = if cfg!(feature = "unstable-v4") {
-        cmd.get_arguments()
-            .find(|a| a.get_id() == "should_be_in_default_section")
-            .unwrap()
-    } else {
-        cmd.get_arguments()
-            .find(|a| a.get_id() == "should-be-in-default-section")
-            .unwrap()
-    };
-    assert_eq!(should_be_in_default_section.get_help_heading(), None);
+    let should_be_in_section_b = cmd
+        .get_arguments()
+        .find(|a| a.get_id() == "should_be_in_default_section")
+        .unwrap();
+    assert_eq!(should_be_in_section_b.get_help_heading(), Some("HEADING B"));
 
     let sub_a_two = cmd.find_subcommand("sub-a-two").unwrap();
 
-    let should_be_in_sub_a = if cfg!(feature = "unstable-v4") {
-        sub_a_two
-            .get_arguments()
-            .find(|a| a.get_id() == "should_be_in_sub_a")
-            .unwrap()
-    } else {
-        sub_a_two
-            .get_arguments()
-            .find(|a| a.get_id() == "should-be-in-sub-a")
-            .unwrap()
-    };
+    let should_be_in_sub_a = sub_a_two
+        .get_arguments()
+        .find(|a| a.get_id() == "should_be_in_sub_a")
+        .unwrap();
     assert_eq!(should_be_in_sub_a.get_help_heading(), Some("SUB A"));
 
     let sub_b_one = cmd.find_subcommand("sub-b-one").unwrap();
 
-    let should_be_in_sub_b = if cfg!(feature = "unstable-v4") {
-        sub_b_one
-            .get_arguments()
-            .find(|a| a.get_id() == "should_be_in_sub_b")
-            .unwrap()
-    } else {
-        sub_b_one
-            .get_arguments()
-            .find(|a| a.get_id() == "should-be-in-sub-b")
-            .unwrap()
-    };
+    let should_be_in_sub_b = sub_b_one
+        .get_arguments()
+        .find(|a| a.get_id() == "should_be_in_sub_b")
+        .unwrap();
     assert_eq!(should_be_in_sub_b.get_help_heading(), Some("SUB B"));
 
     let sub_c = cmd.find_subcommand("sub-c").unwrap();
     let sub_c_one = sub_c.find_subcommand("sub-c-one").unwrap();
 
-    let should_be_in_sub_c = if cfg!(feature = "unstable-v4") {
-        sub_c_one
-            .get_arguments()
-            .find(|a| a.get_id() == "should_be_in_sub_c")
-            .unwrap()
-    } else {
-        sub_c_one
-            .get_arguments()
-            .find(|a| a.get_id() == "should-be-in-sub-c")
-            .unwrap()
-    };
+    let should_be_in_sub_c = sub_c_one
+        .get_arguments()
+        .find(|a| a.get_id() == "should_be_in_sub_c")
+        .unwrap();
     assert_eq!(should_be_in_sub_c.get_help_heading(), Some("SUB C"));
 }
 
@@ -230,28 +167,23 @@ fn app_help_heading_flattened() {
 fn flatten_field_with_help_heading() {
     #[derive(Debug, Clone, Parser)]
     struct CliOptions {
-        #[clap(flatten)]
-        #[clap(next_help_heading = "HEADING A")]
+        #[command(flatten)]
+        #[command(next_help_heading = "HEADING A")]
         options_a: OptionsA,
     }
 
     #[derive(Debug, Clone, Args)]
     struct OptionsA {
-        #[clap(long, value_parser)]
+        #[arg(long)]
         should_be_in_section_a: u32,
     }
 
     let cmd = CliOptions::command();
 
-    let should_be_in_section_a = if cfg!(feature = "unstable-v4") {
-        cmd.get_arguments()
-            .find(|a| a.get_id() == "should_be_in_section_a")
-            .unwrap()
-    } else {
-        cmd.get_arguments()
-            .find(|a| a.get_id() == "should-be-in-section-a")
-            .unwrap()
-    };
+    let should_be_in_section_a = cmd
+        .get_arguments()
+        .find(|a| a.get_id() == "should_be_in_section_a")
+        .unwrap();
     assert_eq!(should_be_in_section_a.get_help_heading(), Some("HEADING A"));
 }
 
@@ -262,19 +194,19 @@ fn flatten_field_with_help_heading() {
 #[test]
 fn derive_generated_error_has_full_context() {
     #[derive(Debug, Parser)]
-    #[clap(subcommand_negates_reqs = true)]
+    #[command(subcommand_negates_reqs = true)]
     struct Opts {
-        #[clap(long, value_parser)]
+        #[arg(long)]
         req_str: String,
 
-        #[clap(subcommand)]
+        #[command(subcommand)]
         cmd: Option<SubCommands>,
     }
 
     #[derive(Debug, Parser)]
     enum SubCommands {
         Sub {
-            #[clap(short, long, action = clap::ArgAction::Count)]
+            #[arg(short, long, action = clap::ArgAction::Count)]
             verbose: u8,
         },
     }
@@ -286,226 +218,196 @@ fn derive_generated_error_has_full_context() {
         result.unwrap()
     );
 
-    if cfg!(feature = "unstable-v4") {
-        let expected = r#"error: The following required argument was not provided: req_str
+    let expected = r#"error: The following required argument was not provided: req_str
 
-USAGE:
-    clap --req-str <REQ_STR>
-    clap <SUBCOMMAND>
+Usage: clap --req-str <REQ_STR>
+       clap <COMMAND>
 
-For more information try --help
+For more information try '--help'
 "#;
-        assert_eq!(result.unwrap_err().to_string(), expected);
-    } else {
-        let expected = r#"error: The following required argument was not provided: req-str
-
-USAGE:
-    clap --req-str <REQ_STR>
-    clap <SUBCOMMAND>
-
-For more information try --help
-"#;
-        assert_eq!(result.unwrap_err().to_string(), expected);
-    }
+    assert_eq!(result.unwrap_err().to_string(), expected);
 }
 
 #[test]
 fn derive_order_next_order() {
-    static HELP: &str = "test 1.2
+    static HELP: &str = "\
+Usage: test [OPTIONS]
 
-USAGE:
-    test [OPTIONS]
-
-OPTIONS:
-        --flag-b                 first flag
-        --option-b <OPTION_B>    first option
-    -h, --help                   Print help information
-    -V, --version                Print version information
-        --flag-a                 second flag
-        --option-a <OPTION_A>    second option
+Options:
+      --flag-b               first flag
+      --option-b <OPTION_B>  first option
+  -h, --help                 Print help information
+  -V, --version              Print version information
+      --flag-a               second flag
+      --option-a <OPTION_A>  second option
 ";
 
     #[derive(Parser, Debug)]
-    #[clap(name = "test", version = "1.2")]
-    #[clap(setting = AppSettings::DeriveDisplayOrder)]
+    #[command(name = "test", version = "1.2")]
     struct Args {
-        #[clap(flatten)]
+        #[command(flatten)]
         a: A,
-        #[clap(flatten)]
+        #[command(flatten)]
         b: B,
     }
 
     #[derive(Args, Debug)]
-    #[clap(next_display_order = 10000)]
+    #[command(next_display_order = 10000)]
     struct A {
         /// second flag
-        #[clap(long, action)]
+        #[arg(long)]
         flag_a: bool,
         /// second option
-        #[clap(long, value_parser)]
+        #[arg(long)]
         option_a: Option<String>,
     }
 
     #[derive(Args, Debug)]
-    #[clap(next_display_order = 10)]
+    #[command(next_display_order = 10)]
     struct B {
         /// first flag
-        #[clap(long, action)]
+        #[arg(long)]
         flag_b: bool,
         /// first option
-        #[clap(long, value_parser)]
+        #[arg(long)]
         option_b: Option<String>,
     }
 
     use clap::CommandFactory;
     let mut cmd = Args::command();
 
-    let mut buffer: Vec<u8> = Default::default();
-    cmd.write_help(&mut buffer).unwrap();
-    let help = String::from_utf8(buffer).unwrap();
+    let help = cmd.render_help().to_string();
     snapbox::assert_eq(HELP, help);
 }
 
 #[test]
 fn derive_order_next_order_flatten() {
-    static HELP: &str = "test 1.2
+    static HELP: &str = "\
+Usage: test [OPTIONS]
 
-USAGE:
-    test [OPTIONS]
-
-OPTIONS:
-        --flag-b                 first flag
-        --option-b <OPTION_B>    first option
-    -h, --help                   Print help information
-    -V, --version                Print version information
-        --flag-a                 second flag
-        --option-a <OPTION_A>    second option
+Options:
+      --flag-b               first flag
+      --option-b <OPTION_B>  first option
+  -h, --help                 Print help information
+  -V, --version              Print version information
+      --flag-a               second flag
+      --option-a <OPTION_A>  second option
 ";
 
     #[derive(Parser, Debug)]
-    #[clap(setting = AppSettings::DeriveDisplayOrder)]
-    #[clap(name = "test", version = "1.2")]
+    #[command(name = "test", version = "1.2")]
     struct Args {
-        #[clap(flatten)]
-        #[clap(next_display_order = 10000)]
+        #[command(flatten)]
+        #[command(next_display_order = 10000)]
         a: A,
-        #[clap(flatten)]
-        #[clap(next_display_order = 10)]
+        #[command(flatten)]
+        #[command(next_display_order = 10)]
         b: B,
     }
 
     #[derive(Args, Debug)]
     struct A {
         /// second flag
-        #[clap(long, action)]
+        #[arg(long)]
         flag_a: bool,
         /// second option
-        #[clap(long, value_parser)]
+        #[arg(long)]
         option_a: Option<String>,
     }
 
     #[derive(Args, Debug)]
     struct B {
         /// first flag
-        #[clap(long, action)]
+        #[arg(long)]
         flag_b: bool,
         /// first option
-        #[clap(long, value_parser)]
+        #[arg(long)]
         option_b: Option<String>,
     }
 
     use clap::CommandFactory;
     let mut cmd = Args::command();
 
-    let mut buffer: Vec<u8> = Default::default();
-    cmd.write_help(&mut buffer).unwrap();
-    let help = String::from_utf8(buffer).unwrap();
+    let help = cmd.render_help().to_string();
     snapbox::assert_eq(HELP, help);
 }
 
 #[test]
 fn derive_order_no_next_order() {
-    static HELP: &str = "test 1.2
+    static HELP: &str = "\
+Usage: test [OPTIONS]
 
-USAGE:
-    test [OPTIONS]
-
-OPTIONS:
-        --flag-a                 first flag
-        --flag-b                 second flag
-    -h, --help                   Print help information
-        --option-a <OPTION_A>    first option
-        --option-b <OPTION_B>    second option
-    -V, --version                Print version information
+Options:
+      --flag-a               first flag
+      --flag-b               second flag
+  -h, --help                 Print help information
+      --option-a <OPTION_A>  first option
+      --option-b <OPTION_B>  second option
+  -V, --version              Print version information
 ";
 
     #[derive(Parser, Debug)]
-    #[clap(name = "test", version = "1.2")]
-    #[clap(setting = AppSettings::DeriveDisplayOrder)]
-    #[clap(next_display_order = None)]
+    #[command(name = "test", version = "1.2")]
+    #[command(next_display_order = None)]
     struct Args {
-        #[clap(flatten)]
+        #[command(flatten)]
         a: A,
-        #[clap(flatten)]
+        #[command(flatten)]
         b: B,
     }
 
     #[derive(Args, Debug)]
     struct A {
         /// first flag
-        #[clap(long, action)]
+        #[arg(long)]
         flag_a: bool,
         /// first option
-        #[clap(long, value_parser)]
+        #[arg(long)]
         option_a: Option<String>,
     }
 
     #[derive(Args, Debug)]
     struct B {
         /// second flag
-        #[clap(long, action)]
+        #[arg(long)]
         flag_b: bool,
         /// second option
-        #[clap(long, value_parser)]
+        #[arg(long)]
         option_b: Option<String>,
     }
 
     use clap::CommandFactory;
     let mut cmd = Args::command();
 
-    let mut buffer: Vec<u8> = Default::default();
-    cmd.write_help(&mut buffer).unwrap();
-    let help = String::from_utf8(buffer).unwrap();
+    let help = cmd.render_help().to_string();
     snapbox::assert_eq(HELP, help);
 }
 
 #[test]
-#[cfg(feature = "unstable-v4")]
 fn derive_possible_value_help() {
-    static HELP: &str = "clap 
+    static HELP: &str = "\
 Application help
 
-USAGE:
-    clap <ARG>
+Usage: clap <ARG>
 
-ARGS:
-    <ARG>
-            Argument help
+Arguments:
+  <ARG>
+          Argument help
 
-            Possible values:
-              - foo: Foo help
-              - bar: Bar help
+          Possible values:
+          - foo: Foo help
+          - bar: Bar help
 
-OPTIONS:
-    -h, --help
-            Print help information
+Options:
+  -h, --help
+          Print help information (use `-h` for a summary)
 ";
 
     /// Application help
     #[derive(Parser, PartialEq, Debug)]
     struct Args {
         /// Argument help
-        #[clap(value_enum, value_parser)]
+        #[arg(value_enum)]
         arg: ArgChoice,
     }
 
@@ -520,8 +422,34 @@ OPTIONS:
     use clap::CommandFactory;
     let mut cmd = Args::command();
 
-    let mut buffer: Vec<u8> = Default::default();
-    cmd.write_long_help(&mut buffer).unwrap();
-    let help = String::from_utf8(buffer).unwrap();
+    let help = cmd.render_long_help().to_string();
     snapbox::assert_eq(HELP, help);
+}
+
+#[test]
+fn custom_help_flag() {
+    #[derive(Debug, Clone, Parser)]
+    #[command(disable_help_flag = true)]
+    struct CliOptions {
+        #[arg(short = 'h', long = "verbose-help", action = ArgAction::Help)]
+        help: bool,
+    }
+
+    let result = CliOptions::try_parse_from(["cmd", "--verbose-help"]);
+    let err = result.unwrap_err();
+    assert_eq!(err.kind(), clap::error::ErrorKind::DisplayHelp);
+}
+
+#[test]
+fn custom_version_flag() {
+    #[derive(Debug, Clone, Parser)]
+    #[command(disable_version_flag = true, version = "2.0.0")]
+    struct CliOptions {
+        #[arg(short = 'V', long = "verbose-version", action = ArgAction::Version)]
+        version: bool,
+    }
+
+    let result = CliOptions::try_parse_from(["cmd", "--verbose-version"]);
+    let err = result.unwrap_err();
+    assert_eq!(err.kind(), clap::error::ErrorKind::DisplayVersion);
 }

@@ -4,10 +4,13 @@
 .SH NAME
 my/-app /- Tests completions
 .SH SYNOPSIS
-/fBmy/-app/fR [/fB/-h/fR|/fB/-/-help/fR] [/fB/-V/fR|/fB/-/-version/fR] [/fB/-c/fR|/fB/-/-config/fR] [/fIfile/fR] [/fIchoice/fR] [/fIsubcommands/fR]
+/fBmy/-app/fR [/fB/-c/fR|/fB/-/-config/fR] [/fB/-h/fR|/fB/-/-help/fR] [/fB/-V/fR|/fB/-/-version/fR] [/fIfile/fR] [/fIchoice/fR] [/fIsubcommands/fR]
 .SH DESCRIPTION
 Tests completions
 .SH OPTIONS
+.TP
+/fB/-c/fR, /fB/-/-config/fR [default: 0]
+some config file
 .TP
 /fB/-h/fR, /fB/-/-help/fR
 Print help information
@@ -15,14 +18,13 @@ Print help information
 /fB/-V/fR, /fB/-/-version/fR
 Print version information
 .TP
-/fB/-c/fR, /fB/-/-config/fR
-some config file
-.TP
 [/fIfile/fR]
 some input file
 .TP
 [/fIchoice/fR]
 
+.br
+[/fIpossible values: /fRfirst, second]
 .SH SUBCOMMANDS
 .TP
 my/-app/-test(1)

@@ -9,6 +9,7 @@ const completion: Fig.Spec = {
         {
           name: "--case",
           description: "the case to test",
+          isRepeatable: true,
           args: {
             name: "case",
             isOptional: true,
@@ -32,6 +33,7 @@ const completion: Fig.Spec = {
           name: "--config",
           description: "the other case to test",
           hidden: true,
+          isRepeatable: true,
           requiresEquals: true,
           args: {
             name: "config",
@@ -83,13 +85,35 @@ const completion: Fig.Spec = {
     {
       name: "help",
       description: "Print this message or the help of the given subcommand(s)",
-      args: {
-        name: "subcommand",
-        isOptional: true,
-      },
+      subcommands: [
+        {
+          name: "test",
+          description: "tests things",
+        },
+        {
+          name: "some_cmd",
+          description: "tests other things",
+        },
+        {
+          name: "some-cmd-with-hyphens",
+        },
+        {
+          name: "some-hidden-cmd",
+          hidden: true,
+        },
+        {
+          name: "help",
+          description: "Print this message or the help of the given subcommand(s)",
+        },
+      ],
     },
   ],
   options: [
+    {
+      name: ["-c", "-C", "--config", "--conf"],
+      description: "some config file",
+      isRepeatable: true,
+    },
     {
       name: ["-h", "--help"],
       description: "Print help information",
@@ -97,11 +121,6 @@ const completion: Fig.Spec = {
     {
       name: ["-V", "--version"],
       description: "Print version information",
-    },
-    {
-      name: ["-c", "-C", "--config", "--conf"],
-      description: "some config file",
-      isRepeatable: true,
     },
   ],
   args: [

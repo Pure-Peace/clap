@@ -1,34 +1,7 @@
-use super::utils;
-
 use clap::{arg, error::ErrorKind, Arg, ArgAction, ArgMatches, Command};
 
-#[cfg(feature = "suggestions")]
-static DYM: &str =
-    "error: Found argument '--optio' which wasn't expected, or isn't valid in this context
-
-\tDid you mean '--option'?
-
-\tIf you tried to supply `--optio` as a value rather than a flag, use `-- --optio`
-
-USAGE:
-    clap-test --option <opt>...
-
-For more information try --help
-";
-
-#[cfg(feature = "suggestions")]
-static DYM_ISSUE_1073: &str =
-    "error: Found argument '--files-without-matches' which wasn't expected, or isn't valid in this context
-
-\tDid you mean '--files-without-match'?
-
-\tIf you tried to supply `--files-without-matches` as a value rather than a flag, use `-- --files-without-matches`
-
-USAGE:
-    ripgrep-616 --files-without-match
-
-For more information try --help
-";
+#[cfg(feature = "error-context")]
+use super::utils;
 
 #[test]
 fn require_equals_fail() {
@@ -37,7 +10,7 @@ fn require_equals_fail() {
             Arg::new("cfg")
                 .require_equals(true)
                 .value_parser(clap::builder::NonEmptyStringValueParser::new())
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .long("config"),
         )
         .try_get_matches_from(vec!["prog", "--config", "file.conf"]);
@@ -46,19 +19,19 @@ fn require_equals_fail() {
 }
 
 #[test]
+#[cfg(feature = "error-context")]
 fn require_equals_fail_message() {
     static NO_EQUALS: &str =
         "error: Equal sign is needed when assigning values to '--config=<cfg>'.
 
-USAGE:
-    prog [OPTIONS]
+Usage: prog [OPTIONS]
 
-For more information try --help
+For more information try '--help'
 ";
     let cmd = Command::new("prog").arg(
         Arg::new("cfg")
             .require_equals(true)
-            .takes_value(true)
+            .action(ArgAction::Set)
             .long("config"),
     );
     utils::assert_output(cmd, "prog --config file.conf", NO_EQUALS, true);
@@ -69,9 +42,9 @@ fn require_equals_min_values_zero() {
     let res = Command::new("prog")
         .arg(
             Arg::new("cfg")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .require_equals(true)
-                .min_values(0)
+                .num_args(0..)
                 .long("config"),
         )
         .arg(Arg::new("cmd"))
@@ -87,7 +60,7 @@ fn double_hyphen_as_value() {
     let res = Command::new("prog")
         .arg(
             Arg::new("cfg")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .allow_hyphen_values(true)
                 .long("config"),
         )
@@ -104,7 +77,7 @@ fn require_equals_no_empty_values_fail() {
     let res = Command::new("prog")
         .arg(
             Arg::new("cfg")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .require_equals(true)
                 .value_parser(clap::builder::NonEmptyStringValueParser::new())
                 .long("config"),
@@ -112,7 +85,7 @@ fn require_equals_no_empty_values_fail() {
         .arg(Arg::new("some"))
         .try_get_matches_from(vec!["prog", "--config=", "file.conf"]);
     assert!(res.is_err());
-    assert_eq!(res.unwrap_err().kind(), ErrorKind::EmptyValue);
+    assert_eq!(res.unwrap_err().kind(), ErrorKind::InvalidValue);
 }
 
 #[test]
@@ -120,7 +93,7 @@ fn require_equals_empty_vals_pass() {
     let res = Command::new("prog")
         .arg(
             Arg::new("cfg")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .require_equals(true)
                 .long("config"),
         )
@@ -133,7 +106,7 @@ fn require_equals_pass() {
     let res = Command::new("prog")
         .arg(
             Arg::new("cfg")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .require_equals(true)
                 .long("config"),
         )
@@ -177,7 +150,7 @@ fn opts_using_short() {
 #[test]
 fn lots_o_vals() {
     let r = Command::new("opts")
-        .arg(arg!(o: -o <opt> "some opt").multiple_values(true))
+        .arg(arg!(o: -o <opt> "some opt").num_args(1..).required(true))
         .try_get_matches_from(vec![
             "", "-o", "some", "some", "some", "some", "some", "some", "some", "some", "some",
             "some", "some", "some", "some", "some", "some", "some", "some", "some", "some", "some",
@@ -334,40 +307,9 @@ fn multiple_vals_pos_arg_equals() {
 }
 
 #[test]
-fn multiple_vals_pos_arg_delim() {
-    let r = Command::new("mvae")
-        .arg(
-            arg!(o: -o <opt> "some opt")
-                .multiple_values(true)
-                .use_value_delimiter(true),
-        )
-        .arg(arg!([file] "some file"))
-        .try_get_matches_from(vec!["", "-o", "1,2", "some"]);
-    assert!(r.is_ok(), "{}", r.unwrap_err());
-    let m = r.unwrap();
-    assert!(m.contains_id("o"));
-    assert_eq!(
-        m.get_many::<String>("o")
-            .unwrap()
-            .map(|v| v.as_str())
-            .collect::<Vec<_>>(),
-        &["1", "2"]
-    );
-    assert!(m.contains_id("file"));
-    assert_eq!(
-        m.get_one::<String>("file").map(|v| v.as_str()).unwrap(),
-        "some"
-    );
-}
-
-#[test]
 fn require_delims_no_delim() {
     let r = Command::new("mvae")
-        .arg(
-            arg!(o: -o [opt] ... "some opt")
-                .use_value_delimiter(true)
-                .require_value_delimiter(true),
-        )
+        .arg(arg!(o: -o [opt] ... "some opt").value_delimiter(','))
         .arg(arg!([file] "some file"))
         .try_get_matches_from(vec!["mvae", "-o", "1", "2", "some"]);
     assert!(r.is_err());
@@ -380,9 +322,8 @@ fn require_delims() {
     let r = Command::new("mvae")
         .arg(
             arg!(o: -o <opt> "some opt")
-                .multiple_values(true)
-                .use_value_delimiter(true)
-                .require_value_delimiter(true),
+                .value_delimiter(',')
+                .required(true),
         )
         .arg(arg!([file] "some file"))
         .try_get_matches_from(vec!["", "-o", "1,2", "some"]);
@@ -408,7 +349,8 @@ fn leading_hyphen_pass() {
     let r = Command::new("mvae")
         .arg(
             arg!(o: -o <opt> "some opt")
-                .multiple_values(true)
+                .required(true)
+                .num_args(1..)
                 .allow_hyphen_values(true),
         )
         .try_get_matches_from(vec!["", "-o", "-2", "3"]);
@@ -427,7 +369,7 @@ fn leading_hyphen_pass() {
 #[test]
 fn leading_hyphen_fail() {
     let r = Command::new("mvae")
-        .arg(arg!(o: -o <opt> "some opt"))
+        .arg(arg!(o: -o <opt> "some opt").required(true))
         .try_get_matches_from(vec!["", "-o", "-2"]);
     assert!(r.is_err());
     let m = r.unwrap_err();
@@ -439,7 +381,8 @@ fn leading_hyphen_with_flag_after() {
     let r = Command::new("mvae")
         .arg(
             arg!(o: -o <opt> "some opt")
-                .multiple_values(true)
+                .required(true)
+                .num_args(1..)
                 .allow_hyphen_values(true),
         )
         .arg(arg!(f: -f "some flag").action(ArgAction::SetTrue))
@@ -481,8 +424,7 @@ fn leading_hyphen_with_only_pos_follows() {
     let r = Command::new("mvae")
         .arg(
             arg!(o: -o [opt] ... "some opt")
-                .number_of_values(1)
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .allow_hyphen_values(true),
         )
         .arg(arg!([arg] "some arg"))
@@ -502,7 +444,20 @@ fn leading_hyphen_with_only_pos_follows() {
 
 #[test]
 #[cfg(feature = "suggestions")]
+#[cfg(feature = "error-context")]
 fn did_you_mean() {
+    static DYM: &str = "\
+error: Found argument '--optio' which wasn't expected, or isn't valid in this context
+
+  Did you mean '--option'?
+
+  If you tried to supply '--optio' as a value rather than a flag, use '-- --optio'
+
+Usage: clap-test --option <opt>... [positional] [positional2] [positional3]...
+
+For more information try '--help'
+";
+
     utils::assert_output(utils::complex_app(), "clap-test --optio=foo", DYM, true);
 }
 
@@ -513,17 +468,13 @@ fn issue_1047_min_zero_vals_default_val() {
             Arg::new("del")
                 .short('d')
                 .long("del")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .require_equals(true)
-                .min_values(0)
+                .num_args(0..)
                 .default_missing_value("default"),
         )
         .try_get_matches_from(vec!["foo", "-d"])
         .unwrap();
-    #[allow(deprecated)]
-    {
-        assert_eq!(m.occurrences_of("del"), 1);
-    }
     assert_eq!(
         m.get_one::<String>("del").map(|v| v.as_str()),
         Some("default")
@@ -532,7 +483,7 @@ fn issue_1047_min_zero_vals_default_val() {
 
 fn issue_1105_setup(argv: Vec<&'static str>) -> Result<ArgMatches, clap::Error> {
     Command::new("opts")
-        .arg(arg!(-o --option <opt> "some option"))
+        .arg(arg!(-o --option <opt> "some option").required(true))
         .arg(arg!(--flag "some flag"))
         .try_get_matches_from(argv)
 }
@@ -541,7 +492,7 @@ fn issue_1105_setup(argv: Vec<&'static str>) -> Result<ArgMatches, clap::Error> 
 fn issue_1105_empty_value_long_fail() {
     let r = issue_1105_setup(vec!["cmd", "--option", "--flag"]);
     assert!(r.is_err());
-    assert_eq!(r.unwrap_err().kind(), ErrorKind::EmptyValue);
+    assert_eq!(r.unwrap_err().kind(), ErrorKind::InvalidValue);
 }
 
 #[test]
@@ -564,7 +515,7 @@ fn issue_1105_empty_value_long_equals() {
 fn issue_1105_empty_value_short_fail() {
     let r = issue_1105_setup(vec!["cmd", "-o", "--flag"]);
     assert!(r.is_err());
-    assert_eq!(r.unwrap_err().kind(), ErrorKind::EmptyValue);
+    assert_eq!(r.unwrap_err().kind(), ErrorKind::InvalidValue);
 }
 
 #[test]
@@ -593,10 +544,31 @@ fn issue_1105_empty_value_short_explicit_no_space() {
 
 #[test]
 #[cfg(feature = "suggestions")]
+#[cfg(feature = "error-context")]
 fn issue_1073_suboptimal_flag_suggestion() {
+    static DYM_ISSUE_1073: &str = "\
+error: Found argument '--files-without-matches' which wasn't expected, or isn't valid in this context
+
+  Did you mean '--files-without-match'?
+
+  If you tried to supply '--files-without-matches' as a value rather than a flag, use '-- --files-without-matches'
+
+Usage: ripgrep-616 --files-without-match
+
+For more information try '--help'
+";
+
     let cmd = Command::new("ripgrep-616")
-        .arg(Arg::new("files-with-matches").long("files-with-matches"))
-        .arg(Arg::new("files-without-match").long("files-without-match"));
+        .arg(
+            Arg::new("files-with-matches")
+                .long("files-with-matches")
+                .action(ArgAction::SetTrue),
+        )
+        .arg(
+            Arg::new("files-without-match")
+                .long("files-without-match")
+                .action(ArgAction::SetTrue),
+        );
     utils::assert_output(
         cmd,
         "ripgrep-616 --files-without-matches",
@@ -608,7 +580,7 @@ fn issue_1073_suboptimal_flag_suggestion() {
 #[test]
 fn short_non_ascii_no_space() {
     let matches = Command::new("cmd")
-        .arg(arg!(opt: -'磨' <opt>))
+        .arg(arg!(opt: -'磨' <opt>).required(true))
         .try_get_matches_from(&["test", "-磨VALUE"])
         .unwrap();
 
@@ -624,7 +596,7 @@ fn short_non_ascii_no_space() {
 #[test]
 fn short_eq_val_starts_with_eq() {
     let matches = Command::new("cmd")
-        .arg(arg!(opt: -f <opt>))
+        .arg(arg!(opt: -f <opt>).required(true))
         .try_get_matches_from(&["test", "-f==value"])
         .unwrap();
 
@@ -640,7 +612,7 @@ fn short_eq_val_starts_with_eq() {
 #[test]
 fn long_eq_val_starts_with_eq() {
     let matches = Command::new("cmd")
-        .arg(arg!(opt: --foo <opt>))
+        .arg(arg!(opt: --foo <opt>).required(true))
         .try_get_matches_from(&["test", "--foo==value"])
         .unwrap();
 
@@ -701,7 +673,7 @@ fn infer_long_arg() {
                 .alias("autobahn")
                 .action(ArgAction::SetTrue),
         )
-        .arg(Arg::new("racecar").long("racecar").takes_value(true));
+        .arg(Arg::new("racecar").long("racecar").action(ArgAction::Set));
 
     let matches = cmd
         .clone()

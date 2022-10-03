@@ -417,13 +417,59 @@ fn mut_arg_all() {
     let mut cmd = utils::complex_app();
     let arg_names = cmd
         .get_arguments()
-        .map(|a| a.get_id())
-        .filter(|a| *a != "version" && *a != "help")
+        .map(|a| a.get_id().clone())
+        .filter(|a| a != "version" && a != "help")
         .collect::<Vec<_>>();
 
     for arg_name in arg_names {
         cmd = cmd.mut_arg(arg_name, |arg| arg.hide_possible_values(true));
     }
+}
+
+#[test]
+fn mut_subcommand_all() {
+    let cmd = utils::complex_app();
+
+    assert_eq!(
+        cmd.find_subcommand("subcmd")
+            .unwrap()
+            .is_disable_version_flag_set(),
+        false
+    );
+    let cmd = cmd.mut_subcommand("subcmd", |subcmd| subcmd.disable_version_flag(true));
+    assert_eq!(
+        cmd.find_subcommand("subcmd")
+            .unwrap()
+            .is_disable_version_flag_set(),
+        true
+    );
+}
+
+#[test]
+fn mut_subcommand_with_alias_resolve() {
+    let mut cmd =
+        Command::new("foo").subcommand(Command::new("bar").alias("baz").about("test subcmd"));
+    assert_eq!(
+        cmd.find_subcommand("baz")
+            .unwrap()
+            .get_about()
+            .unwrap()
+            .to_string(),
+        "test subcmd"
+    );
+
+    let true_name = cmd.find_subcommand("baz").unwrap().get_name().to_string();
+    assert_eq!(true_name, "bar");
+
+    cmd = cmd.mut_subcommand(&*true_name, |subcmd| subcmd.about("modified about"));
+    assert_eq!(
+        cmd.find_subcommand("baz")
+            .unwrap()
+            .get_about()
+            .unwrap()
+            .to_string(),
+        "modified about"
+    );
 }
 
 #[test]

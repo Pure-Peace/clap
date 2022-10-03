@@ -10,23 +10,20 @@ use clap::Parser;
 
 #[derive(Parser, Debug)]
 struct MakeCookie {
-    #[clap(short, value_parser)]
+    #[arg(short)]
     s: String,
 
-    #[clap(subcommand)]
+    #[command(subcommand)]
     cmd: Option<Option<Command>>,
 }
 
 #[derive(Parser, Debug)]
 enum Command {
     /// Pound acorns into flour for cookie dough.
-    Pound {
-        #[clap(value_parser)]
-        acorns: u32,
-    },
+    Pound { acorns: u32 },
 
     Sparkle {
-        #[clap(short, value_parser)]
+        #[arg(short)]
         color: String,
     },
 }

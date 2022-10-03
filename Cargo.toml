@@ -10,7 +10,7 @@ members = [
 
 [package]
 name = "clap"
-version = "3.2.6"
+version = "4.0.8"
 description = "A simple to use, efficient, and full-featured Command Line Argument Parser"
 repository = "https://github.com/clap-rs/clap"
 categories = ["command-line-interface"]
@@ -23,7 +23,7 @@ keywords = [
 ]
 license = "MIT OR Apache-2.0"
 edition = "2021"
-rust-version = "1.56.1"  # MSRV
+rust-version = "1.60.0"  # MSRV
 include = [
   "build.rs",
   "src/**/*",
@@ -51,69 +51,68 @@ pre-release-replacements = [
   {file="CHANGELOG.md", search="ReleaseDate", replace="{{date}}", min=1},
   {file="CHANGELOG.md", search="<!-- next-header -->", replace="<!-- next-header -->\n## [Unreleased] - ReleaseDate\n", exactly=1},
   {file="CHANGELOG.md", search="<!-- next-url -->", replace="<!-- next-url -->\n[Unreleased]: https://github.com/clap-rs/clap/compare/{{tag_name}}...HEAD", exactly=1},
-  {file="README.md", search="github.com/clap-rs/clap/blob/[^/]+/", replace="github.com/clap-rs/clap/blob/{{tag_name}}/", exactly=13, prerelease = true},
-  {file="README.md", search="version = \"[a-z0-9\\.-]+\"", replace="version = \"{{version}}\"", exactly=1, prerelease = true},
-  {file="src/derive.rs", search="github.com/clap-rs/clap/blob/[^/]+/", replace="github.com/clap-rs/clap/blob/{{tag_name}}/", exactly=4, prerelease = true},
 ]
 
 [features]
 default = [
   "std",
   "color",
+  "help",
+  "usage",
+  "error-context",
   "suggestions",
 ]
-debug = ["clap_derive/debug", "backtrace"] # Enables debug messages
-unstable-doc = ["derive", "cargo", "wrap_help", "yaml", "env", "unicode", "regex", "unstable-replace", "unstable-grouped"] # for docs.rs
+debug = ["clap_derive?/debug", "dep:backtrace"] # Enables debug messages
+unstable-doc = ["derive", "cargo", "wrap_help", "env", "unicode", "string", "unstable-replace", "unstable-grouped"] # for docs.rs
 
 # Used in default
-std = ["indexmap/std"] # support for no_std in a backwards-compatible way
-color = ["atty", "termcolor"]
-suggestions = ["strsim"]
+std = [] # support for no_std in a backwards-compatible way
+color = ["dep:atty", "dep:termcolor"]
+help = []
+usage = []
+error-context = []
+suggestions = ["dep:strsim", "error-context"]
 
 # Optional
-# note: this will always enable clap_derive, change this to `clap_derive?/unstable-v4` when MSRV is bigger than 1.60
-deprecated = ["clap_derive/deprecated"] # Guided experience to prepare for next breaking release (at different stages of development, this may become default)
-derive = ["clap_derive", "once_cell"]
-cargo = ["once_cell"] # Disable if you're not using Cargo, enables Cargo-env-var-dependent macros
-wrap_help = ["terminal_size", "textwrap/terminal_size"]
-yaml = ["yaml-rust"]
+deprecated = ["clap_derive?/deprecated"] # Guided experience to prepare for next breaking release (at different stages of development, this may become default)
+derive = ["dep:clap_derive", "dep:once_cell"]
+cargo = ["dep:once_cell"] # Disable if you're not using Cargo, enables Cargo-env-var-dependent macros
+wrap_help = ["help", "dep:terminal_size"]
 env = [] # Use environment variables during arg parsing
-unicode = ["textwrap/unicode-width", "unicase"]  # Support for unicode characters in arguments and help messages
+unicode = ["dep:unicode-width", "dep:unicase"]  # Support for unicode characters in arguments and help messages
+string = []  # Allow runtime generated strings
 
 # In-work features
 unstable-replace = []
 unstable-grouped = []
-# note: this will always enable clap_derive, change this to `clap_derive?/unstable-v4` when MSRV is bigger than 1.60
-unstable-v4 = ["clap_derive/unstable-v4", "deprecated"]
+unstable-v5 = ["clap_derive?/unstable-v5", "deprecated"]
 
 [lib]
 bench = false
 
 [dependencies]
-clap_derive = { path = "./clap_derive", version = "=3.2.6", optional = true }
-clap_lex = { path = "./clap_lex", version = "0.2.2" }
+clap_derive = { path = "./clap_derive", version = "=4.0.8", optional = true }
+clap_lex = { path = "./clap_lex", version = "0.3.0" }
 bitflags = "1.2"
-textwrap = { version = "0.15.0", default-features = false, features = [] }
 unicase = { version = "2.6", optional = true }
-indexmap = "1.0"
 strsim = { version = "0.10",  optional = true }
-yaml-rust = { version = "0.4.1",  optional = true }
 atty = { version = "0.2",  optional = true }
 termcolor = { version = "1.1.1", optional = true }
-terminal_size = { version = "0.1.12", optional = true }
-regex = { version = "1.0", optional = true }
+terminal_size = { version = "0.2.1", optional = true }
 backtrace = { version = "0.3", optional = true }
+unicode-width = { version = "0.1.9", optional = true }
 once_cell = { version = "1.12.0", optional = true }
 
 [dev-dependencies]
-regex = "1.0"
-trybuild = "1.0.18"
+trybuild = "1.0.65"
 rustversion = "1"
 # Cutting out `filesystem` feature
 trycmd = { version = "0.13", default-features = false, features = ["color-auto", "diff", "examples"] }
 humantime = "2"
-snapbox = "0.2.9"
+snapbox = "0.4"
 shlex = "1.1.0"
+static_assertions = "1.1.0"
+unic-emoji-char = "0.9.0"
 
 [[example]]
 name = "demo"
@@ -136,6 +135,10 @@ name = "escaped-positional-derive"
 required-features = ["derive"]
 
 [[example]]
+name = "find"
+required-features = ["cargo"]
+
+[[example]]
 name = "git-derive"
 required-features = ["derive"]
 
@@ -154,6 +157,7 @@ path = "examples/multicall-hostname.rs"
 [[example]]
 name = "repl"
 path = "examples/repl.rs"
+required-features = ["help"]
 
 [[example]]
 name = "01_quick"
@@ -190,8 +194,18 @@ path = "examples/tutorial_builder/03_02_option.rs"
 required-features = ["cargo"]
 
 [[example]]
+name = "03_02_option_mult"
+path = "examples/tutorial_builder/03_02_option_mult.rs"
+required-features = ["cargo"]
+
+[[example]]
 name = "03_03_positional"
 path = "examples/tutorial_builder/03_03_positional.rs"
+required-features = ["cargo"]
+
+[[example]]
+name = "03_03_positional_mult"
+path = "examples/tutorial_builder/03_03_positional_mult.rs"
 required-features = ["cargo"]
 
 [[example]]
@@ -212,7 +226,7 @@ required-features = ["cargo"]
 [[example]]
 name = "04_01_enum"
 path = "examples/tutorial_builder/04_01_enum.rs"
-required-features = ["cargo", "derive"]
+required-features = ["cargo"]
 
 [[example]]
 name = "04_02_parse"
@@ -276,8 +290,18 @@ path = "examples/tutorial_derive/03_02_option.rs"
 required-features = ["derive"]
 
 [[example]]
+name = "03_02_option_mult_derive"
+path = "examples/tutorial_derive/03_02_option_mult.rs"
+required-features = ["derive"]
+
+[[example]]
 name = "03_03_positional_derive"
 path = "examples/tutorial_derive/03_03_positional.rs"
+required-features = ["derive"]
+
+[[example]]
+name = "03_03_positional_mult_derive"
+path = "examples/tutorial_derive/03_03_positional_mult.rs"
 required-features = ["derive"]
 
 [[example]]
@@ -325,11 +349,6 @@ name = "05_01_assert_derive"
 path = "examples/tutorial_derive/05_01_assert.rs"
 required-features = ["derive"]
 test = true
-
-[[example]]
-name = "custom-bool"
-path = "examples/derive_ref/custom-bool.rs"
-required-features = ["derive"]
 
 [[example]]
 name = "interop_augment_args"

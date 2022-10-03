@@ -12,15 +12,18 @@
 // commit#ea76fa1b1b273e65e3b0b1046643715b49bec51f which is licensed under the
 // MIT/Apache 2.0 license.
 
-#![allow(deprecated)]
-
+use clap::builder::BoolishValueParser;
+use clap::builder::TypedValueParser as _;
+use clap::ArgAction;
+use clap::CommandFactory;
 use clap::Parser;
 
 #[test]
 fn bool_type_is_flag() {
-    #[derive(Parser, PartialEq, Debug)]
+    #[derive(Parser, PartialEq, Eq, Debug)]
+    #[command(args_override_self = true)]
     struct Opt {
-        #[clap(short, long, action)]
+        #[arg(short, long)]
         alice: bool,
     }
 
@@ -45,12 +48,92 @@ fn bool_type_is_flag() {
 }
 
 #[test]
-fn count() {
-    #[derive(Parser, PartialEq, Debug)]
+fn non_bool_type_flag() {
+    fn parse_from_flag(b: bool) -> usize {
+        if b {
+            10
+        } else {
+            5
+        }
+    }
+
+    #[derive(Parser, Debug)]
     struct Opt {
-        #[clap(short, long, action = clap::ArgAction::Count)]
+        #[arg(short, long, action = ArgAction::SetTrue, value_parser = BoolishValueParser::new().map(parse_from_flag))]
+        alice: usize,
+        #[arg(short, long, action = ArgAction::SetTrue, value_parser = BoolishValueParser::new().map(parse_from_flag))]
+        bob: usize,
+    }
+
+    let opt = Opt::try_parse_from(&["test"]).unwrap();
+    assert_eq!(opt.alice, 5);
+    assert_eq!(opt.bob, 5);
+
+    let opt = Opt::try_parse_from(&["test", "-a"]).unwrap();
+    assert_eq!(opt.alice, 10);
+    assert_eq!(opt.bob, 5);
+
+    let opt = Opt::try_parse_from(&["test", "-b"]).unwrap();
+    assert_eq!(opt.alice, 5);
+    assert_eq!(opt.bob, 10);
+
+    let opt = Opt::try_parse_from(&["test", "-b", "-a"]).unwrap();
+    assert_eq!(opt.alice, 10);
+    assert_eq!(opt.bob, 10);
+}
+
+#[test]
+#[ignore] // Not a good path for supporting this atm
+fn inferred_help() {
+    #[derive(Parser, PartialEq, Eq, Debug)]
+    struct Opt {
+        /// Foo
+        #[arg(short, long)]
+        help: bool,
+    }
+
+    let mut cmd = Opt::command();
+    cmd.build();
+    let arg = cmd.get_arguments().find(|a| a.get_id() == "help").unwrap();
+    assert_eq!(
+        arg.get_help().map(|s| s.to_string()),
+        Some("Foo".to_owned()),
+        "Incorrect help"
+    );
+    assert!(matches!(arg.get_action(), clap::ArgAction::Help));
+}
+
+#[test]
+#[ignore] // Not a good path for supporting this atm
+fn inferred_version() {
+    #[derive(Parser, PartialEq, Eq, Debug)]
+    struct Opt {
+        /// Foo
+        #[arg(short, long)]
+        version: bool,
+    }
+
+    let mut cmd = Opt::command();
+    cmd.build();
+    let arg = cmd
+        .get_arguments()
+        .find(|a| a.get_id() == "version")
+        .unwrap();
+    assert_eq!(
+        arg.get_help().map(|s| s.to_string()),
+        Some("Foo".to_owned()),
+        "Incorrect help"
+    );
+    assert!(matches!(arg.get_action(), clap::ArgAction::Version));
+}
+
+#[test]
+fn count() {
+    #[derive(Parser, PartialEq, Eq, Debug)]
+    struct Opt {
+        #[arg(short, long, action = clap::ArgAction::Count)]
         alice: u8,
-        #[clap(short, long, action = clap::ArgAction::Count)]
+        #[arg(short, long, action = clap::ArgAction::Count)]
         bob: u8,
     }
 
@@ -79,43 +162,12 @@ fn count() {
 }
 
 #[test]
-fn non_bool_type_flag() {
-    fn parse_from_flag(b: bool) -> std::sync::atomic::AtomicBool {
-        std::sync::atomic::AtomicBool::new(b)
-    }
-
-    #[derive(Parser, Debug)]
-    struct Opt {
-        #[clap(short, long, parse(from_flag = parse_from_flag))]
-        alice: std::sync::atomic::AtomicBool,
-        #[clap(short, long, parse(from_flag))]
-        bob: std::sync::atomic::AtomicBool,
-    }
-
-    let falsey = Opt::try_parse_from(&["test"]).unwrap();
-    assert!(!falsey.alice.load(std::sync::atomic::Ordering::Relaxed));
-    assert!(!falsey.bob.load(std::sync::atomic::Ordering::Relaxed));
-
-    let alice = Opt::try_parse_from(&["test", "-a"]).unwrap();
-    assert!(alice.alice.load(std::sync::atomic::Ordering::Relaxed));
-    assert!(!alice.bob.load(std::sync::atomic::Ordering::Relaxed));
-
-    let bob = Opt::try_parse_from(&["test", "-b"]).unwrap();
-    assert!(!bob.alice.load(std::sync::atomic::Ordering::Relaxed));
-    assert!(bob.bob.load(std::sync::atomic::Ordering::Relaxed));
-
-    let both = Opt::try_parse_from(&["test", "-b", "-a"]).unwrap();
-    assert!(both.alice.load(std::sync::atomic::Ordering::Relaxed));
-    assert!(both.bob.load(std::sync::atomic::Ordering::Relaxed));
-}
-
-#[test]
 fn mixed_type_flags() {
-    #[derive(Parser, PartialEq, Debug)]
+    #[derive(Parser, PartialEq, Eq, Debug)]
     struct Opt {
-        #[clap(short, long, action)]
+        #[arg(short, long)]
         alice: bool,
-        #[clap(short, long, action = clap::ArgAction::Count)]
+        #[arg(short, long, action = clap::ArgAction::Count)]
         bob: u8,
     }
 
@@ -167,7 +219,7 @@ fn mixed_type_flags() {
 fn ignore_qualified_bool_type() {
     mod inner {
         #[allow(non_camel_case_types)]
-        #[derive(PartialEq, Debug, Clone)]
+        #[derive(PartialEq, Eq, Debug, Clone)]
         pub struct bool(pub String);
 
         impl std::str::FromStr for self::bool {
@@ -179,9 +231,8 @@ fn ignore_qualified_bool_type() {
         }
     }
 
-    #[derive(Parser, PartialEq, Debug)]
+    #[derive(Parser, PartialEq, Eq, Debug)]
     struct Opt {
-        #[clap(action)]
         arg: inner::bool,
     }
 
@@ -195,9 +246,9 @@ fn ignore_qualified_bool_type() {
 
 #[test]
 fn override_implicit_action() {
-    #[derive(Parser, PartialEq, Debug)]
+    #[derive(Parser, PartialEq, Eq, Debug)]
     struct Opt {
-        #[clap(long, action = clap::ArgAction::Set)]
+        #[arg(long, action = clap::ArgAction::Set)]
         arg: bool,
     }
 
@@ -214,9 +265,9 @@ fn override_implicit_action() {
 
 #[test]
 fn override_implicit_from_flag_positional() {
-    #[derive(Parser, PartialEq, Debug)]
+    #[derive(Parser, PartialEq, Eq, Debug)]
     struct Opt {
-        #[clap(action = clap::ArgAction::Set)]
+        #[arg(action = clap::ArgAction::Set)]
         arg: bool,
     }
 

@@ -1,16 +1,13 @@
 use clap::Command;
 use clap::{arg, Arg, ArgAction};
 use criterion::{criterion_group, criterion_main, Criterion};
-use std::io::Cursor;
 
 fn build_help(cmd: &mut Command) -> String {
-    let mut buf = Cursor::new(Vec::with_capacity(50));
-    cmd.write_help(&mut buf).unwrap();
-    let content = buf.into_inner();
-    String::from_utf8(content).unwrap()
+    let help = cmd.render_help();
+    help.to_string()
 }
 
-fn app_example1<'c>() -> Command<'c> {
+fn app_example1() -> Command {
     Command::new("MyApp")
         .version("1.0")
         .author("Kevin K. <kbknapp@gmail.com>")
@@ -30,24 +27,25 @@ fn app_example1<'c>() -> Command<'c> {
         )
 }
 
-fn app_example2<'c>() -> Command<'c> {
+fn app_example2() -> Command {
     Command::new("MyApp")
         .version("1.0")
         .author("Kevin K. <kbknapp@gmail.com>")
         .about("Does awesome things")
 }
 
-fn app_example3<'c>() -> Command<'c> {
+fn app_example3() -> Command {
     Command::new("MyApp")
         .arg(
             Arg::new("debug")
                 .help("turn on debugging information")
-                .short('d'),
+                .short('d')
+                .action(ArgAction::SetTrue),
         )
-        .args(&[
+        .args([
             Arg::new("config")
                 .help("sets the config file to use")
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .short('c')
                 .long("config"),
             Arg::new("input")
@@ -64,7 +62,7 @@ fn app_example3<'c>() -> Command<'c> {
         )
 }
 
-fn app_example4<'c>() -> Command<'c> {
+fn app_example4() -> Command {
     Command::new("MyApp")
         .about("Parses an input file to do awesome things")
         .version("1.0")
@@ -73,6 +71,7 @@ fn app_example4<'c>() -> Command<'c> {
             Arg::new("debug")
                 .help("turn on debugging information")
                 .short('d')
+                .action(ArgAction::SetTrue)
                 .long("debug"),
         )
         .arg(
@@ -89,7 +88,7 @@ fn app_example4<'c>() -> Command<'c> {
         )
 }
 
-fn app_example5<'c>() -> Command<'c> {
+fn app_example5() -> Command {
     Command::new("MyApp").arg(
         Arg::new("awesome")
             .help("turns up the awesome")
@@ -99,7 +98,7 @@ fn app_example5<'c>() -> Command<'c> {
     )
 }
 
-fn app_example6<'c>() -> Command<'c> {
+fn app_example6() -> Command {
     Command::new("MyApp")
         .arg(
             Arg::new("input")
@@ -111,15 +110,14 @@ fn app_example6<'c>() -> Command<'c> {
         .arg(Arg::new("config").help("the config file to use").index(2))
 }
 
-fn app_example7<'c>() -> Command<'c> {
+fn app_example7() -> Command {
     Command::new("MyApp")
         .arg(Arg::new("config"))
         .arg(Arg::new("output"))
         .arg(
             Arg::new("input")
                 .help("the input file to use")
-                .takes_value(true)
-                .multiple_values(true)
+                .num_args(1..)
                 .action(ArgAction::Append)
                 .required(true)
                 .short('i')
@@ -129,15 +127,14 @@ fn app_example7<'c>() -> Command<'c> {
         )
 }
 
-fn app_example8<'c>() -> Command<'c> {
+fn app_example8() -> Command {
     Command::new("MyApp")
         .arg(Arg::new("config"))
         .arg(Arg::new("output"))
         .arg(
             Arg::new("input")
                 .help("the input file to use")
-                .takes_value(true)
-                .multiple_values(true)
+                .num_args(1..)
                 .action(ArgAction::Append)
                 .required(true)
                 .short('i')
@@ -147,12 +144,12 @@ fn app_example8<'c>() -> Command<'c> {
         )
 }
 
-fn app_example10<'c>() -> Command<'c> {
+fn app_example10() -> Command {
     Command::new("myapp").about("does awesome things").arg(
         Arg::new("CONFIG")
             .help("The config file to use (default is \"config.json\")")
             .short('c')
-            .takes_value(true),
+            .action(ArgAction::Set),
     )
 }
 

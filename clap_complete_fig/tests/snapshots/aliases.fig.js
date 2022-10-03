@@ -5,10 +5,15 @@ const completion: Fig.Spec = {
     {
       name: ["-o", "-O", "--option", "--opt"],
       description: "cmd option",
+      isRepeatable: true,
       args: {
         name: "option",
         isOptional: true,
       },
+    },
+    {
+      name: ["-f", "-F", "--flag", "--flg"],
+      description: "cmd flag",
     },
     {
       name: ["-h", "--help"],
@@ -17,10 +22,6 @@ const completion: Fig.Spec = {
     {
       name: ["-V", "--version"],
       description: "Print version information",
-    },
-    {
-      name: ["-f", "-F", "--flag", "--flg"],
-      description: "cmd flag",
     },
   ],
   args: {

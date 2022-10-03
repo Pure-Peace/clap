@@ -3,6 +3,7 @@ use clap::{arg, Arg, ArgAction, Command};
 #[test]
 fn multiple_occurrences_of_flags_long() {
     let m = Command::new("mo_flags_long")
+        .args_override_self(true)
         .arg(arg!(--multflag "allowed multiple flag").action(ArgAction::SetTrue))
         .arg(arg!(--flag "disallowed multiple flag").action(ArgAction::SetTrue))
         .try_get_matches_from(vec!["", "--multflag", "--flag", "--multflag"])
@@ -16,6 +17,7 @@ fn multiple_occurrences_of_flags_long() {
 #[test]
 fn multiple_occurrences_of_flags_short() {
     let m = Command::new("mo_flags_short")
+        .args_override_self(true)
         .arg(arg!(-m --multflag "allowed multiple flag").action(ArgAction::SetTrue))
         .arg(arg!(-f --flag "disallowed multiple flag").action(ArgAction::SetTrue))
         .try_get_matches_from(vec!["", "-m", "-f", "-m"])
@@ -28,11 +30,7 @@ fn multiple_occurrences_of_flags_short() {
 
 #[test]
 fn multiple_occurrences_of_positional() {
-    let cmd = Command::new("test").arg(
-        Arg::new("multi")
-            .multiple_values(true)
-            .action(ArgAction::Append),
-    );
+    let cmd = Command::new("test").arg(Arg::new("multi").num_args(1..).action(ArgAction::Append));
 
     let m = cmd
         .clone()
@@ -98,7 +96,6 @@ fn multiple_occurrences_of_before_env() {
             .env("VERBOSE")
             .short('v')
             .long("verbose")
-            .takes_value(false)
             .action(ArgAction::Count),
     );
 
@@ -130,7 +127,6 @@ fn multiple_occurrences_of_after_env() {
         Arg::new("verbose")
             .short('v')
             .long("verbose")
-            .takes_value(false)
             .action(ArgAction::Count)
             .env("VERBOSE"),
     );

@@ -1,5 +1,6 @@
 use std::io::Write;
 
+use clap::builder::StyledStr;
 use clap::*;
 
 use crate::generator::{utils, Generator};
@@ -59,15 +60,15 @@ fn escape_string(string: &str) -> String {
     string.replace('\'', "''")
 }
 
-fn get_tooltip<T: ToString>(help: Option<&str>, data: T) -> String {
+fn get_tooltip<T: ToString>(help: Option<&StyledStr>, data: T) -> String {
     match help {
-        Some(help) => escape_string(help),
+        Some(help) => escape_string(&help.to_string()),
         _ => data.to_string(),
     }
 }
 
 fn generate_inner<'help>(
-    p: &Command<'help>,
+    p: &Command,
     previous_command_name: &str,
     names: &mut Vec<&'help str>,
 ) -> String {
