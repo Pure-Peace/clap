@@ -7,6 +7,92 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [4.0.22] - 2022-11-07
+
+### Fixes
+
+- *(help)* Don't overflow into next-line-help early due to stale (pre-v4) padding calculations
+
+## [4.0.21] - 2022-11-07
+
+### Features
+
+- *(derive)* `long_about` and `long_help` attributes, without a value, force using doc comment (before it wouldn't be set if there wasn't anything different than the short help)
+
+## [4.0.20] - 2022-11-07
+
+### Fixes
+
+- *(derive)*  Allow defaulted value parser for '()' fields
+
+## [4.0.19] - 2022-11-04
+
+### Features
+
+- `ColorChoice` now implements `ValueEnum`
+
+## [4.0.18] - 2022-10-20
+
+### Fixes
+
+- *(derive)* Allow `#[command(skip)]` to also work with enum variants with a value
+
+## [4.0.17] - 2022-10-18
+
+### Fixes
+
+- Allow using `Arg::last(true)` with `Arg::value_hint(ValueHint::CommandWithArguments)`
+
+## [4.0.16] - 2022-10-18
+
+### Fixes
+
+- `Arg::exclusive(true)` should not be exclusive with the argument's own `ArgGroup`
+
+## [4.0.15] - 2022-10-13
+
+### Fixes
+
+- *(error)* Don't suggest `--` when it doesn't help
+- *(error)* Be more consistent in quoting, punctuation, and indentation in errors
+
+## [4.0.14] - 2022-10-12
+
+### Fixes
+
+- Only put `ArgGroup` in `ArgMatches` when explicitly specified, fixing derives handling of option-flattened fields (#4375)
+
+## [4.0.13] - 2022-10-11
+
+### Features
+
+- *(derive)* Allow `()` for fields to mean "don't read" (#4371)
+
+## [4.0.12] - 2022-10-10
+
+### Features
+
+- Added `TypedValueParser::try_map` for when adapting an existing `TypedValueParser` can fail
+- *(error)* Create errors like clap with `Error::new`, `Error::with_cmd`, and `Error::insert`
+
+## [4.0.11] - 2022-10-09
+
+### Fixes
+
+- *(help)* Fix wrapping calculations with ANSI escape codes
+
+## [4.0.10] - 2022-10-05
+
+### Features
+
+- *(derive)* Support `#[arg(flatten)]` on `Option` types (#4211, #4350)
+
+## [4.0.9] - 2022-10-03
+
+### Fixes
+
+- *(derive)* Process doc comments for `#[command(subcommand)]` like in clap v3
+
 ## [4.0.8] - 2022-10-01
 
 ### Fixes
@@ -29,7 +115,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Features
 
-- *(derive)* Support `#[group(skip)] (#4279, #4301)
+- *(derive)* Support `#[group(skip)]` (#4279, #4301)
 
 ## [4.0.5] - 2022-09-30
 
@@ -3905,7 +3991,21 @@ Minimum version of Rust is now v1.13.0 (Stable)
 * **arg**  allow lifetimes other than 'static in arguments ([9e8c1fb9](https://github.com/clap-rs/clap/commit/9e8c1fb9406f8448873ca58bab07fe905f1551e5))
 
 <!-- next-url -->
-[Unreleased]: https://github.com/clap-rs/clap/compare/v4.0.8...HEAD
+[Unreleased]: https://github.com/clap-rs/clap/compare/v4.0.22...HEAD
+[4.0.22]: https://github.com/clap-rs/clap/compare/v4.0.21...v4.0.22
+[4.0.21]: https://github.com/clap-rs/clap/compare/v4.0.20...v4.0.21
+[4.0.20]: https://github.com/clap-rs/clap/compare/v4.0.19...v4.0.20
+[4.0.19]: https://github.com/clap-rs/clap/compare/v4.0.18...v4.0.19
+[4.0.18]: https://github.com/clap-rs/clap/compare/v4.0.17...v4.0.18
+[4.0.17]: https://github.com/clap-rs/clap/compare/v4.0.16...v4.0.17
+[4.0.16]: https://github.com/clap-rs/clap/compare/v4.0.15...v4.0.16
+[4.0.15]: https://github.com/clap-rs/clap/compare/v4.0.14...v4.0.15
+[4.0.14]: https://github.com/clap-rs/clap/compare/v4.0.13...v4.0.14
+[4.0.13]: https://github.com/clap-rs/clap/compare/v4.0.12...v4.0.13
+[4.0.12]: https://github.com/clap-rs/clap/compare/v4.0.11...v4.0.12
+[4.0.11]: https://github.com/clap-rs/clap/compare/v4.0.10...v4.0.11
+[4.0.10]: https://github.com/clap-rs/clap/compare/v4.0.9...v4.0.10
+[4.0.9]: https://github.com/clap-rs/clap/compare/v4.0.8...v4.0.9
 [4.0.8]: https://github.com/clap-rs/clap/compare/v4.0.7...v4.0.8
 [4.0.7]: https://github.com/clap-rs/clap/compare/v4.0.6...v4.0.7
 [4.0.6]: https://github.com/clap-rs/clap/compare/v4.0.5...v4.0.6

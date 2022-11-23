@@ -64,6 +64,27 @@ impl ErrorFormatter for RichFormatter {
             }
         }
 
+        if let Some(valid) = error.get(ContextKind::SuggestedSubcommand) {
+            styled.none("\n\n");
+            did_you_mean(&mut styled, valid);
+        }
+        if let Some(valid) = error.get(ContextKind::SuggestedArg) {
+            styled.none("\n\n");
+            did_you_mean(&mut styled, valid);
+        }
+        if let Some(valid) = error.get(ContextKind::SuggestedValue) {
+            styled.none("\n\n");
+            did_you_mean(&mut styled, valid);
+        }
+        let suggestions = error.get(ContextKind::Suggested);
+        if let Some(ContextValue::StyledStrs(suggestions)) = suggestions {
+            for suggestion in suggestions {
+                styled.none("\n\n");
+                styled.none(TAB);
+                styled.extend(suggestion.iter());
+            }
+        }
+
         let usage = error.get(ContextKind::Usage);
         if let Some(ContextValue::StyledStr(usage)) = usage {
             put_usage(&mut styled, usage.clone());
@@ -128,7 +149,7 @@ fn write_dynamic_context(error: &crate::error::Error, styled: &mut StyledStr) ->
             if let Some(ContextValue::String(invalid_arg)) = invalid_arg {
                 styled.none("Equal sign is needed when assigning values to '");
                 styled.warning(invalid_arg);
-                styled.none("'.");
+                styled.none("'");
                 true
             } else {
                 false
@@ -147,8 +168,9 @@ fn write_dynamic_context(error: &crate::error::Error, styled: &mut StyledStr) ->
                     styled.warning(invalid_arg);
                     styled.none("' requires a value but none was supplied");
                 } else {
-                    styled.none(quote(invalid_value));
-                    styled.none(" isn't a valid value for '");
+                    styled.none("'");
+                    styled.none(invalid_value);
+                    styled.none("' isn't a valid value for '");
                     styled.warning(invalid_arg);
                     styled.none("'");
                 }
@@ -169,15 +191,6 @@ fn write_dynamic_context(error: &crate::error::Error, styled: &mut StyledStr) ->
                         styled.none("]");
                     }
                 }
-
-                let suggestion = error.get(ContextKind::SuggestedValue);
-                if let Some(ContextValue::String(suggestion)) = suggestion {
-                    styled.none("\n\n");
-                    styled.none(TAB);
-                    styled.none("Did you mean ");
-                    styled.good(quote(suggestion));
-                    styled.none("?");
-                }
                 true
             } else {
                 false
@@ -189,24 +202,6 @@ fn write_dynamic_context(error: &crate::error::Error, styled: &mut StyledStr) ->
                 styled.none("The subcommand '");
                 styled.warning(invalid_sub);
                 styled.none("' wasn't recognized");
-
-                let valid_sub = error.get(ContextKind::SuggestedSubcommand);
-                if let Some(ContextValue::String(valid_sub)) = valid_sub {
-                    styled.none("\n\n");
-                    styled.none(TAB);
-                    styled.none("Did you mean ");
-                    styled.good(valid_sub);
-                    styled.none("?");
-                }
-
-                let suggestion = error.get(ContextKind::SuggestedCommand);
-                if let Some(ContextValue::String(suggestion)) = suggestion {
-                    styled.none(
-            "\n\nIf you believe you received this message in error, try re-running with '",
-        );
-                    styled.good(suggestion);
-                    styled.none("'");
-                }
                 true
             } else {
                 false
@@ -287,9 +282,9 @@ fn write_dynamic_context(error: &crate::error::Error, styled: &mut StyledStr) ->
                 Some(ContextValue::String(invalid_value)),
             ) = (invalid_arg, invalid_value)
             {
-                styled.none("Invalid value ");
-                styled.warning(quote(invalid_value));
-                styled.none(" for '");
+                styled.none("Invalid value '");
+                styled.warning(invalid_value);
+                styled.none("' for '");
                 styled.warning(invalid_arg);
                 if let Some(source) = error.inner.source.as_deref() {
                     styled.none("': ");
@@ -331,57 +326,6 @@ fn write_dynamic_context(error: &crate::error::Error, styled: &mut StyledStr) ->
                 styled.none("Found argument '");
                 styled.warning(invalid_arg.to_string());
                 styled.none("' which wasn't expected, or isn't valid in this context");
-
-                let valid_sub = error.get(ContextKind::SuggestedSubcommand);
-                let valid_arg = error.get(ContextKind::SuggestedArg);
-                match (valid_sub, valid_arg) {
-                    (
-                        Some(ContextValue::String(valid_sub)),
-                        Some(ContextValue::String(valid_arg)),
-                    ) => {
-                        styled.none("\n\n");
-                        styled.none(TAB);
-                        styled.none("Did you mean ");
-                        styled.none("to put '");
-                        styled.good(valid_arg);
-                        styled.none("' after the subcommand '");
-                        styled.good(valid_sub);
-                        styled.none("'?");
-                    }
-                    (None, Some(ContextValue::String(valid_arg))) => {
-                        styled.none("\n\n");
-                        styled.none(TAB);
-                        styled.none("Did you mean '");
-                        styled.good(valid_arg);
-                        styled.none("'?");
-                    }
-                    (_, _) => {}
-                }
-
-                let invalid_arg = error.get(ContextKind::InvalidArg);
-                if let Some(ContextValue::String(invalid_arg)) = invalid_arg {
-                    if invalid_arg.starts_with('-') {
-                        styled.none("\n\n");
-                        styled.none(TAB);
-                        styled.none("If you tried to supply '");
-                        styled.warning(invalid_arg);
-                        styled.none("' as a value rather than a flag, use '");
-                        styled.good("-- ");
-                        styled.good(invalid_arg);
-                        styled.none("'");
-                    }
-
-                    let trailing_arg = error.get(ContextKind::TrailingArg);
-                    if trailing_arg == Some(&ContextValue::Bool(true)) {
-                        styled.none("\n\n");
-                        styled.none(TAB);
-                        styled.none("If you tried to supply '");
-                        styled.warning(invalid_arg);
-                        styled.none("' as a subcommand, remove the '");
-                        styled.warning("--");
-                        styled.none("' before it.");
-                    }
-                }
                 true
             } else {
                 false
@@ -446,15 +390,32 @@ fn try_help(styled: &mut StyledStr, help: Option<&str>) {
     }
 }
 
-fn quote(s: impl AsRef<str>) -> String {
-    let s = s.as_ref();
-    format!("{:?}", s)
+#[cfg(feature = "error-context")]
+fn did_you_mean(styled: &mut StyledStr, valid: &ContextValue) {
+    if let ContextValue::String(valid) = valid {
+        styled.none(TAB);
+        styled.none("Did you mean '");
+        styled.good(valid);
+        styled.none("'?");
+    } else if let ContextValue::Strings(valid) = valid {
+        styled.none(TAB);
+        styled.none("Did you mean ");
+        for (i, valid) in valid.iter().enumerate() {
+            if i != 0 {
+                styled.none(", ");
+            }
+            styled.none("'");
+            styled.good(valid);
+            styled.none("'");
+        }
+        styled.none("?");
+    }
 }
 
 fn escape(s: impl AsRef<str>) -> String {
     let s = s.as_ref();
     if s.contains(char::is_whitespace) {
-        quote(s)
+        format!("{:?}", s)
     } else {
         s.to_owned()
     }

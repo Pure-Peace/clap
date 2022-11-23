@@ -175,7 +175,12 @@ impl<'cmd> Parser<'cmd> {
                                 .remaining(&mut args_cursor)
                                 .map(|x| x.to_str().expect(INVALID_UTF8))
                                 .collect();
-                            return Err(self.did_you_mean_error(&arg, matcher, &remaining_args));
+                            return Err(self.did_you_mean_error(
+                                &arg,
+                                matcher,
+                                &remaining_args,
+                                trailing_values,
+                            ));
                         }
                         ParseResult::UnneededAttachedValue { rest, used, arg } => {
                             let _ = self.resolve_pending(matcher);
@@ -257,10 +262,14 @@ impl<'cmd> Parser<'cmd> {
                         }
                         ParseResult::NoMatchingArg { arg } => {
                             let _ = self.resolve_pending(matcher);
+                            // We already know it looks like a flag
+                            let suggested_trailing_arg =
+                                !trailing_values && self.cmd.has_positionals();
                             return Err(ClapError::unknown_argument(
                                 self.cmd,
                                 arg,
                                 None,
+                                suggested_trailing_arg,
                                 Usage::new(self.cmd).create_usage_with_title(&[]),
                             ));
                         }
@@ -374,10 +383,14 @@ impl<'cmd> Parser<'cmd> {
             if let Some(arg) = self.cmd.get_keymap().get(&pos_counter) {
                 if arg.is_last_set() && !trailing_values {
                     let _ = self.resolve_pending(matcher);
+                    // Its already considered a positional, we don't need to suggest turning it
+                    // into one
+                    let suggested_trailing_arg = false;
                     return Err(ClapError::unknown_argument(
                         self.cmd,
                         arg_os.display().to_string(),
                         None,
+                        suggested_trailing_arg,
                         Usage::new(self.cmd).create_usage_with_title(&[]),
                     ));
                 }
@@ -497,14 +510,10 @@ impl<'cmd> Parser<'cmd> {
         );
         // If the argument looks like a subcommand.
         if !candidates.is_empty() {
-            let candidates: Vec<_> = candidates
-                .iter()
-                .map(|candidate| format!("'{}'", candidate))
-                .collect();
             return ClapError::invalid_subcommand(
                 self.cmd,
                 arg_os.display().to_string(),
-                candidates.join(" or "),
+                candidates,
                 self.cmd
                     .get_bin_name()
                     .unwrap_or_else(|| self.cmd.get_name())
@@ -524,10 +533,14 @@ impl<'cmd> Parser<'cmd> {
             );
         }
 
+        let suggested_trailing_arg = !trailing_values
+            && self.cmd.has_positionals()
+            && (arg_os.is_long() || arg_os.is_short());
         ClapError::unknown_argument(
             self.cmd,
             arg_os.display().to_string(),
             None,
+            suggested_trailing_arg,
             Usage::new(self.cmd).create_usage_with_title(&[]),
         )
     }
@@ -1078,15 +1091,6 @@ impl<'cmd> Parser<'cmd> {
             matcher.add_index_to(arg.get_id(), self.cur_idx.get());
         }
 
-        // Increment or create the group "args"
-        for group in self.cmd.groups_for_arg(arg.get_id()) {
-            matcher.add_val_to(
-                &group,
-                AnyValue::new(arg.get_id().clone()),
-                OsString::from(arg.get_id().as_str()),
-            );
-        }
-
         Ok(())
     }
 
@@ -1499,20 +1503,15 @@ impl<'cmd> Parser<'cmd> {
             self.remove_overrides(arg, matcher);
         }
         matcher.start_custom_arg(arg, source);
-        for group in self.cmd.groups_for_arg(arg.get_id()) {
-            matcher.start_custom_group(group, source);
-        }
-    }
-
-    /// Increase occurrence of specific argument and the grouped arg it's in.
-    fn start_occurrence_of_arg(&self, matcher: &mut ArgMatcher, arg: &Arg) {
-        // With each new occurrence, remove overrides from prior occurrences
-        self.remove_overrides(arg, matcher);
-
-        matcher.start_occurrence_of_arg(arg);
-        // Increment or create the group "args"
-        for group in self.cmd.groups_for_arg(arg.get_id()) {
-            matcher.start_occurrence_of_group(group);
+        if source.is_explicit() {
+            for group in self.cmd.groups_for_arg(arg.get_id()) {
+                matcher.start_custom_group(group.clone(), source);
+                matcher.add_val_to(
+                    &group,
+                    AnyValue::new(arg.get_id().clone()),
+                    OsString::from(arg.get_id().as_str()),
+                );
+            }
         }
     }
 }
@@ -1525,6 +1524,7 @@ impl<'cmd> Parser<'cmd> {
         arg: &str,
         matcher: &mut ArgMatcher,
         remaining_args: &[&str],
+        trailing_values: bool,
     ) -> ClapError {
         debug!("Parser::did_you_mean_error: arg={}", arg);
         // Didn't match a flag or option
@@ -1549,7 +1549,7 @@ impl<'cmd> Parser<'cmd> {
         // Add the arg to the matches to build a proper usage string
         if let Some((name, _)) = did_you_mean.as_ref() {
             if let Some(arg) = self.cmd.get_keymap().get(&name.as_ref()) {
-                self.start_occurrence_of_arg(matcher, arg);
+                self.start_custom_arg(matcher, arg, ValueSource::CommandLine);
             }
         }
 
@@ -1563,10 +1563,16 @@ impl<'cmd> Parser<'cmd> {
             .cloned()
             .collect();
 
+        // `did_you_mean` is a lot more likely and should cause us to skip the `--` suggestion
+        //
+        // In theory, this is only called for `--long`s, so we don't need to check
+        let suggested_trailing_arg =
+            did_you_mean.is_none() && !trailing_values && self.cmd.has_positionals();
         ClapError::unknown_argument(
             self.cmd,
             format!("--{}", arg),
             did_you_mean,
+            suggested_trailing_arg,
             Usage::new(self.cmd)
                 .required(&required)
                 .create_usage_with_title(&*used),

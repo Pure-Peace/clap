@@ -29,6 +29,8 @@ pub enum ContextKind {
     SuggestedValue,
     /// Trailing argument
     TrailingArg,
+    /// Potential fix for the user
+    Suggested,
     /// A usage string
     Usage,
     /// An opaque message to the user
@@ -52,6 +54,7 @@ impl ContextKind {
             Self::SuggestedArg => Some("Suggested Argument"),
             Self::SuggestedValue => Some("Suggested Value"),
             Self::TrailingArg => Some("Trailing Argument"),
+            Self::Suggested => Some("Suggested"),
             Self::Usage => None,
             Self::Custom => None,
         }
@@ -79,6 +82,8 @@ pub enum ContextValue {
     Strings(Vec<String>),
     /// A single value
     StyledStr(crate::builder::StyledStr),
+    /// many value
+    StyledStrs(Vec<crate::builder::StyledStr>),
     /// A single value
     Number(isize),
 }
@@ -91,6 +96,15 @@ impl std::fmt::Display for ContextValue {
             Self::String(v) => v.fmt(f),
             Self::Strings(v) => v.join(", ").fmt(f),
             Self::StyledStr(v) => v.fmt(f),
+            Self::StyledStrs(v) => {
+                for (i, v) in v.iter().enumerate() {
+                    if i != 0 {
+                        ", ".fmt(f)?;
+                    }
+                    v.fmt(f)?;
+                }
+                Ok(())
+            }
             Self::Number(v) => v.fmt(f),
         }
     }

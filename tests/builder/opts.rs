@@ -21,8 +21,7 @@ fn require_equals_fail() {
 #[test]
 #[cfg(feature = "error-context")]
 fn require_equals_fail_message() {
-    static NO_EQUALS: &str =
-        "error: Equal sign is needed when assigning values to '--config=<cfg>'.
+    static NO_EQUALS: &str = "error: Equal sign is needed when assigning values to '--config=<cfg>'
 
 Usage: prog [OPTIONS]
 
@@ -451,8 +450,6 @@ error: Found argument '--optio' which wasn't expected, or isn't valid in this co
 
   Did you mean '--option'?
 
-  If you tried to supply '--optio' as a value rather than a flag, use '-- --optio'
-
 Usage: clap-test --option <opt>... [positional] [positional2] [positional3]...
 
 For more information try '--help'
@@ -550,8 +547,6 @@ fn issue_1073_suboptimal_flag_suggestion() {
 error: Found argument '--files-without-matches' which wasn't expected, or isn't valid in this context
 
   Did you mean '--files-without-match'?
-
-  If you tried to supply '--files-without-matches' as a value rather than a flag, use '-- --files-without-matches'
 
 Usage: ripgrep-616 --files-without-match
 
