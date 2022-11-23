@@ -4,8 +4,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## 5.0.0 - ReleaseDate
+
+### Breaking Changes
+
+- Made `ArgPredicate` `non_exhaustive`
+
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
+
+## [4.0.26] - 2022-11-16
+
+### Fixes
+
+- *(error)* Fix typos in `ContextKind::as_str`
+
+## [4.0.25] - 2022-11-15
+
+### Features
+
+- *(error)* Report available subcommands when required subcommand is missing
+
+## [4.0.24] - 2022-11-14
+
+### Fixes
+
+- Avoid panic when printing an argument that isn't built
+
+## [4.0.23] - 2022-11-11
+
+### Fixes
+
+- Don't panic on reporting invalid-long errors when followed by invalid UTF8
+- *(help)* Clarified argument to `help` subcommand
 
 ## [4.0.22] - 2022-11-07
 
@@ -3991,7 +4022,11 @@ Minimum version of Rust is now v1.13.0 (Stable)
 * **arg**  allow lifetimes other than 'static in arguments ([9e8c1fb9](https://github.com/clap-rs/clap/commit/9e8c1fb9406f8448873ca58bab07fe905f1551e5))
 
 <!-- next-url -->
-[Unreleased]: https://github.com/clap-rs/clap/compare/v4.0.22...HEAD
+[Unreleased]: https://github.com/clap-rs/clap/compare/v4.0.26...HEAD
+[4.0.26]: https://github.com/clap-rs/clap/compare/v4.0.25...v4.0.26
+[4.0.25]: https://github.com/clap-rs/clap/compare/v4.0.24...v4.0.25
+[4.0.24]: https://github.com/clap-rs/clap/compare/v4.0.23...v4.0.24
+[4.0.23]: https://github.com/clap-rs/clap/compare/v4.0.22...v4.0.23
 [4.0.22]: https://github.com/clap-rs/clap/compare/v4.0.21...v4.0.22
 [4.0.21]: https://github.com/clap-rs/clap/compare/v4.0.20...v4.0.21
 [4.0.20]: https://github.com/clap-rs/clap/compare/v4.0.19...v4.0.20

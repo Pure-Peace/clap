@@ -1074,6 +1074,7 @@ impl Command {
     /// ```
     #[inline]
     #[must_use]
+    #[cfg(any(not(feature = "unstable-v5"), feature = "wrap_help"))]
     pub fn term_width(mut self, width: usize) -> Self {
         self.term_w = Some(width);
         self
@@ -1100,6 +1101,7 @@ impl Command {
     /// ```
     #[inline]
     #[must_use]
+    #[cfg(any(not(feature = "unstable-v5"), feature = "wrap_help"))]
     pub fn max_term_width(mut self, w: usize) -> Self {
         self.max_w = Some(w);
         self
@@ -4287,7 +4289,7 @@ impl Command {
                         .action(ArgAction::Append)
                         .num_args(..)
                         .value_name("COMMAND")
-                        .help("The subcommand whose help message to display"),
+                        .help("Print help for the subcommand(s)"),
                 )
             };
             self._propagate_subcommand(&mut help_subcmd);
